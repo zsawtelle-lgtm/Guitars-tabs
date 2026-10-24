@@ -16,6 +16,8 @@ A chord and tab viewer in the spirit of Ultimate Guitar, built for playing along
 - **Apple Music link**: save a song's Apple Music link (Share → Copy Link in Music) to get an **Open in Apple Music** button, which plays it from your own library in the Music app on iPhone, iPad or Mac. There's also a Search Apple Music shortcut. The app can't see what the Music app is playing, so start autoscroll yourself, or use **⌨ One-key start (Mac)**: a Shortcuts/AppleScript key combo that presses play in Music and starts the page's autoscroll at the same moment. The page provides `window.fretboard.play() / pause() / toggle()` for this.
 - **Transpose** by semitone. Chords, the key and the diagrams all update, with barre shapes generated for any key.
 - **Chord library**: all 12 roots × 16 chord types, with multiple voicings.
+- **Add from Apple Music**: search Apple's public catalog (no login needed). The title, artist, album, artwork, length and Apple Music link come straight from Apple, and results already in your songs are flagged. Tempo and key are left blank because Apple doesn't publish them.
+- **Sourced chords**: the editor links to Ultimate Guitar, Songsterr and a web search for that exact song. You paste a published chord sheet and save its link, and each song shows where its info and chords came from. Built-in songs are labeled as arrangements written for this app.
 - **Your songs**: add or edit songs (edits to built-in songs are saved as your own copy). Paste chords-over-lyrics text straight from a website and it's understood as-is. Favorites and search.
 - Dark and light themes, and a layout that works on phones.
 

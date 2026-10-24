@@ -3,6 +3,7 @@ import { deleteSong, newSongId, saveSong, type Song } from "../lib/storage";
 import { BUILT_IN_SONGS } from "../data/songs";
 import { groupRows, parseSong, toInline } from "../lib/parser";
 import { SongSheet } from "./SongSheet";
+import { chordSearchLinks } from "../lib/catalog";
 
 const EMPTY: Song = { id: "", title: "", artist: "", body: "" };
 
@@ -75,6 +76,32 @@ export function Editor({ song }: { song?: Song }) {
             onChange={(e) => set("duration", parseDuration(e.target.value))} />
         </label>
       </div>
+
+      {draft.appleId && (
+        <p className="source-line"><span className="source-ok">✓</span> Title, artist and length from Apple Music
+          {draft.album ? <> · <i>{draft.album}</i></> : null}</p>
+      )}
+
+      {!song?.builtIn && (
+        <div className="chord-source-panel">
+          <div>
+            <b>Chords from a published source</b>
+            <p className="muted">
+              Find this song's chord sheet or tab, paste it below, and save the page's link so you always know where the
+              chords came from.
+            </p>
+            <div className="source-links">
+              {chordSearchLinks(draft.title, draft.artist).map((l) => (
+                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer">{l.label} ↗</a>
+              ))}
+            </div>
+          </div>
+          <label className="field">Chord source link
+            <input type="url" value={draft.chordSource ?? ""} placeholder="https://…"
+              onChange={(e) => set("chordSource", e.target.value.trim() || undefined)} />
+          </label>
+        </div>
+      )}
 
       <div className="editor-body-head">
         <div className="tabs">

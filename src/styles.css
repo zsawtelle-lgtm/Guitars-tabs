@@ -455,3 +455,42 @@ select {
   font-family: var(--mono); font-size: 0.78rem; white-space: pre; overflow-x: auto; tab-size: 2;
 }
 .help-note { font-size: 0.85rem; }
+
+/* ---------- Song sources / Apple catalog search ---------- */
+.library-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.song-row.has-art { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.song-row-art { grid-row: 1 / span 2; width: 56px; height: 56px; border-radius: 6px; object-fit: cover; }
+.song-row.has-art .song-row-chords { grid-column: 2; }
+.song-row.has-art .song-row-meta { grid-column: 3; }
+
+.song-title-row { align-items: center; }
+.song-title-text { flex: 1; min-width: 0; }
+.song-art { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; flex: none; }
+.source-line { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 0; font-size: 0.85rem; }
+.source-ok { color: #3ecf8e; font-weight: 800; }
+
+.chord-source-panel {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 280px); gap: 12px 20px; align-items: end;
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+}
+.chord-source-panel.no-chords { grid-template-columns: 1fr; border-style: dashed; }
+.chord-source-panel p { margin: 4px 0 10px; font-size: 0.88rem; }
+.source-links { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) { .chord-source-panel { grid-template-columns: 1fr; } }
+
+.add-search .search { margin-top: 8px; }
+.catalog-list { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--border); }
+.catalog-row {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 10px 4px; border-bottom: 1px solid var(--border);
+}
+.catalog-art { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--surface-2); }
+.catalog-main { display: flex; flex-direction: column; min-width: 0; }
+.catalog-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-time { font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+.catalog-credit { font-size: 0.75rem; margin-top: 16px; }
+@media (max-width: 480px) {
+  .catalog-row { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .catalog-art { width: 48px; height: 48px; }
+  .catalog-time { display: none; }
+}

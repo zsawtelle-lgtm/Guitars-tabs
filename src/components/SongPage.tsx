@@ -12,6 +12,7 @@ import { StrumPanel, stopStrum } from "./StrumPanel";
 import { VideoPanel } from "./VideoPanel";
 import { AppleMusicRow } from "./AppleMusicRow";
 import { parseAppleMusicUrl } from "../lib/appleMusic";
+import { chordSearchLinks } from "../lib/catalog";
 import { formatTime } from "../lib/time";
 import { parseYouTubeId, type YTPlayer } from "../lib/youtube";
 import { ChordPopover, ChordStrip } from "./ChordViews";
@@ -320,9 +321,10 @@ export function SongPage({ song }: { song: Song }) {
     <div className="song-page">
       <header className="song-header">
         <div className="song-title-row">
-          <div>
+          {song.artwork && <img src={song.artwork} alt="" className="song-art" />}
+          <div className="song-title-text">
             <h1>{song.title}</h1>
-            <div className="song-artist">{song.artist}</div>
+            <div className="song-artist">{song.artist}{song.album ? <span className="muted"> · {song.album}</span> : null}</div>
           </div>
           <div className="song-actions">
             <button className={"icon-btn star" + (favorite ? " on" : "")} onClick={() => toggleFavorite(song.id)}
@@ -342,7 +344,9 @@ export function SongPage({ song }: { song: Song }) {
           {song.capo ? (<><dt>Capo</dt><dd>{song.capo}{ordinal(song.capo)} fret</dd></>) : null}
           {song.tempo ? (<><dt>Tempo</dt><dd>{song.tempo} BPM</dd></>) : null}
           {song.beatsPerBar ? (<><dt>Time</dt><dd>{song.beatsPerBar}/4</dd></>) : null}
+          {song.duration ? (<><dt>Length</dt><dd>{formatTime(song.duration)}</dd></>) : null}
         </dl>
+        <SourceLine song={song} />
       </header>
 
       {showChords && <ChordStrip chords={chords} onSelect={setPopover} />}
@@ -363,6 +367,24 @@ export function SongPage({ song }: { song: Song }) {
 
       {song.strum && (
         <StrumPanel key={song.id} pattern={song.strum} beatsPerBar={song.beatsPerBar ?? 4} chords={chords} />
+      )}
+
+      {!lines.length && (
+        <div className="chord-source-panel no-chords">
+          <div>
+            <b>No chords yet</b>
+            <p className="muted">
+              Find a published chord sheet or tab for this song, then paste it in with <b>Edit</b> and save its link as the
+              chord source.
+            </p>
+            <div className="source-links">
+              {chordSearchLinks(song.title, song.artist).map((l) => (
+                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer">{l.label} ↗</a>
+              ))}
+              <a className="btn primary" href={`#/edit/${encodeURIComponent(song.id)}`}>Edit →</a>
+            </div>
+          </div>
+        </div>
       )}
 
       <div ref={sheetRef}>
@@ -500,4 +522,35 @@ declare global {
     /** Start/stop the open song from outside the page (see the Mac one-key start). */
     fretboard?: { play(): void; pause(): void; toggle(): void; playing: boolean };
   }
+}
+
+/** Where the song's details and chords came from, so nothing looks more authoritative than it is. */
+function SourceLine({ song }: { song: Song }) {
+  if (song.builtIn) {
+    return (
+      <p className="source-line muted">
+        Built-in arrangement of a traditional song. The chords, tempo and strumming were written for this app, not taken
+        from a published source.
+      </p>
+    );
+  }
+  let host: string | null = null;
+  try {
+    host = song.chordSource ? new URL(song.chordSource).hostname.replace(/^www\./, "") : null;
+  } catch {
+    host = null;
+  }
+  return (
+    <p className="source-line">
+      {song.appleId ? <span><span className="source-ok">✓</span> Song info from Apple Music</span> : null}
+      {host ? (
+        <span>
+          Chords from{" "}
+          <a href={song.chordSource} target="_blank" rel="noreferrer">{host} ↗</a>
+        </span>
+      ) : song.body.trim() ? (
+        <span className="muted">Chord source not recorded (add it in Edit)</span>
+      ) : null}
+    </p>
+  );
 }

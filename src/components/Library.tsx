@@ -23,7 +23,10 @@ export function Library() {
     <div className="page library">
       <div className="library-head">
         <h1>Songs</h1>
-        <a className="btn primary" href="#/new">+ New song</a>
+        <div className="library-actions">
+          <a className="btn primary" href="#/add">🔍 Add from Apple Music</a>
+          <a className="btn" href="#/new">+ Write your own</a>
+        </div>
       </div>
       <input
         className="search" type="search" placeholder="Search songs or artists…" value={query}
@@ -50,7 +53,8 @@ export function Library() {
             const chords = chordsInSong(parseSong(s.body)).slice(0, 6);
             return (
               <li key={s.id}>
-                <a className="song-row" href={`#/song/${encodeURIComponent(s.id)}`}>
+                <a className={"song-row" + (s.artwork ? " has-art" : "")} href={`#/song/${encodeURIComponent(s.id)}`}>
+                  {s.artwork && <img src={s.artwork} alt="" className="song-row-art" loading="lazy" />}
                   <div className="song-row-main">
                     <span className="song-row-title">
                       {favorites.includes(s.id) && <span className="star on">★ </span>}

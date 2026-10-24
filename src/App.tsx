@@ -4,6 +4,7 @@ import { useMetronome } from "./lib/hooks";
 import { Library } from "./components/Library";
 import { SongPage } from "./components/SongPage";
 import { Editor } from "./components/Editor";
+import { AddFromSearch } from "./components/AddFromSearch";
 import { ChordLibrary } from "./components/ChordLibrary";
 import { MetronomePanel, toggleMetronome } from "./components/MetronomePanel";
 
@@ -12,6 +13,7 @@ type Route =
   | { name: "song"; id: string }
   | { name: "edit"; id: string }
   | { name: "new" }
+  | { name: "add" }
   | { name: "chords" }
   | { name: "metronome" };
 
@@ -25,6 +27,8 @@ function parseHash(hash: string): Route {
       return { name: "edit", id: decoded };
     case "new":
       return { name: "new" };
+    case "add":
+      return { name: "add" };
     case "chords":
       return { name: "chords" };
     case "metronome":
@@ -68,6 +72,9 @@ export function App() {
     case "new":
       content = <Editor key="new" />;
       break;
+    case "add":
+      content = <AddFromSearch />;
+      break;
     case "chords":
       content = <ChordLibrary />;
       break;
@@ -94,7 +101,7 @@ export function App() {
           <span className="logo-mark">♪</span> Fretboard
         </a>
         <nav className="app-nav">
-          {nav("#/", "Songs", route.name === "library" || route.name === "song")}
+          {nav("#/", "Songs", route.name === "library" || route.name === "song" || route.name === "add")}
           {nav("#/chords", "Chords", route.name === "chords")}
           {nav("#/metronome", "Metronome", route.name === "metronome")}
         </nav>

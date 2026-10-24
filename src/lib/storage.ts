@@ -15,6 +15,12 @@ export interface Song {
   /** Song length in seconds, used by "fit scroll to song length". */
   duration?: number;
   body: string;
+  /** Apple Music catalog ID when the song's details came from Apple's catalog. */
+  appleId?: number;
+  album?: string;
+  artwork?: string;
+  /** Link to the published chord sheet / tab the body was taken from. */
+  chordSource?: string;
   builtIn?: boolean;
   updatedAt?: number;
 }
@@ -120,16 +126,15 @@ export function getPrefs(id: string): SongPrefs {
   return { ...DEFAULT_PREFS, ...read<Record<string, Partial<SongPrefs>>>(KEYS.prefs, {})[id] };
 }
 
+export function setSongPrefs(id: string, patch: Partial<SongPrefs>): void {
+  const all = read<Record<string, Partial<SongPrefs>>>(KEYS.prefs, {});
+  write(KEYS.prefs, { ...all, [id]: { ...getPrefs(id), ...patch } });
+}
+
 export function useSongPrefs(id: string): [SongPrefs, (patch: Partial<SongPrefs>) => void] {
   useStoreVersion();
   const prefs = getPrefs(id);
-  const update = useCallback(
-    (patch: Partial<SongPrefs>) => {
-      const all = read<Record<string, Partial<SongPrefs>>>(KEYS.prefs, {});
-      write(KEYS.prefs, { ...all, [id]: { ...getPrefs(id), ...patch } });
-    },
-    [id],
-  );
+  const update = useCallback((patch: Partial<SongPrefs>) => setSongPrefs(id, patch), [id]);
   return [prefs, update];
 }
 
