@@ -519,3 +519,10 @@ select {
 }
 .video-error p { margin: 4px 0; }
 .video-error code { font-size: 0.8rem; }
+.paste-box {
+  display: block; width: 100%; margin-top: 10px; padding: 10px 12px; resize: none;
+  border-radius: 10px; border: 2px dashed var(--accent); background: var(--bg); color: var(--text);
+  font-size: 16px; /* 16px stops iPhone Safari zooming in on focus */
+}
+.paste-box::placeholder { color: var(--muted); }
+.paste-hint { font-size: 0.82rem; margin: 6px 0 0; }

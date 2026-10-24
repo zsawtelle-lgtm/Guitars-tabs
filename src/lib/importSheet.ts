@@ -64,6 +64,20 @@ export function describeMeta(meta: SheetMeta): string {
     .join(" · ");
 }
 
+/**
+ * The link in a short pasted snippet, e.g. a bare URL or what a phone's Share sheet
+ * copies ("Check out this tab on Ultimate Guitar: https://…"). A long, multi-line
+ * paste is treated as a chord sheet even if it happens to contain a link.
+ */
+export function findLink(text: string): string | null {
+  const t = text.trim();
+  if (!t || t.length > 500 || t.split("\n").length > 3) return null;
+  const m = /https?:\/\/[^\s<>"']+/i.exec(t);
+  if (!m) return null;
+  const url = m[0].replace(/[).,;:!?]+$/, "");
+  return isLink(url) ? url : null;
+}
+
 export function isLink(text: string): boolean {
   const t = text.trim();
   if (/\s/.test(t)) return false;

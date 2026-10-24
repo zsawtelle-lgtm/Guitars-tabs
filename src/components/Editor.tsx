@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteSong, newSongId, saveSong, setImportTarget, type Song } from "../lib/storage";
 import { BUILT_IN_SONGS } from "../data/songs";
 import { groupRows, parseSong, toInline } from "../lib/parser";
 import { SongSheet } from "./SongSheet";
 import { chordSearchLinks } from "../lib/catalog";
-import { bookmarkletSource, cleanSheet, describeMeta, extractMeta, isLink } from "../lib/importSheet";
+import { bookmarkletSource, cleanSheet, describeMeta, extractMeta, findLink } from "../lib/importSheet";
+
+// Phones and tablets: no ⌘V, so instructions talk about tap-and-hold → Paste instead.
+const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
 const EMPTY: Song = { id: "", title: "", artist: "", body: "" };
 
@@ -30,20 +33,22 @@ export function Editor({ song }: { song?: Song }) {
 
   // Whatever you copied on the chord site: a page link becomes the chord source, and a
   // chord sheet becomes the song text (with any key/capo/tempo the sheet lists).
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const applyPasted = useCallback((text: string) => {
     if (!text.trim()) return;
-    if (isLink(text)) {
-      const url = text.trim();
+    const url = findLink(text);
+    if (url) {
       setDraft((d) => ({ ...d, chordSource: url }));
-      setNotice(`Saved ${new URL(url).hostname.replace(/^www\./, "")} as the chord source.`);
+      setNotice(
+        `Saved ${new URL(url).hostname.replace(/^www\./, "")} as the chord source.` +
+          (draftRef.current.body.trim() ? "" : " Now copy the chord sheet itself and paste it too."),
+      );
       return;
     }
     const { body, meta } = extractMeta(cleanSheet(text));
-    let hadSource = false;
-    setDraft((d) => {
-      hadSource = !!d.chordSource;
-      return { ...d, body, key: meta.key ?? d.key, capo: meta.capo ?? d.capo, tempo: meta.tempo ?? d.tempo };
-    });
+    const hadSource = !!draftRef.current.chordSource;
+    setDraft((d) => ({ ...d, body, key: meta.key ?? d.key, capo: meta.capo ?? d.capo, tempo: meta.tempo ?? d.tempo }));
     setPreview(true);
     const found = describeMeta(meta);
     const lines = body.split("\n").length;
@@ -54,14 +59,31 @@ export function Editor({ song }: { song?: Song }) {
     );
   }, []);
 
+  const pasteFallback = isTouch
+    ? "Tap and hold the paste box below and choose Paste instead."
+    : "Click the paste box below and press ⌘V (Ctrl+V) instead.";
   const pasteFromClipboard = () => {
     if (!navigator.clipboard?.readText) {
-      setNotice("This browser can't read the clipboard from a button. Press ⌘V (Ctrl+V) on this page instead.");
+      setNotice(`This browser can't read the clipboard from a button. ${pasteFallback}`);
       return;
     }
     navigator.clipboard.readText().then(applyPasted, () =>
-      setNotice("The browser didn't allow reading the clipboard. Press ⌘V (Ctrl+V) on this page instead."),
+      setNotice(
+        isTouch
+          ? "Safari only allows this after you tap the small “Paste” bubble that pops up. " + pasteFallback
+          : "The browser didn't allow reading the clipboard. " + pasteFallback,
+      ),
     );
+  };
+
+  // Pasting into the song text when it's empty (or fully selected) gets the same cleanup.
+  const onBodyPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const el = e.currentTarget;
+    const replacingAll = !el.value.trim() || (el.selectionStart === 0 && el.selectionEnd === el.value.length);
+    const text = e.clipboardData.getData("text/plain");
+    if (!replacingAll || !text) return;
+    e.preventDefault();
+    applyPasted(text);
   };
 
   // ⌘V anywhere on the page (outside a text box) pastes straight in.
@@ -153,8 +175,25 @@ export function Editor({ song }: { song?: Song }) {
             </div>
             <div className="source-links paste-row">
               <button type="button" className="btn primary" onClick={pasteFromClipboard}>📋 Paste from clipboard</button>
-              <span className="muted">or press ⌘V on this page. Paste the sheet, then the page link.</span>
             </div>
+            <textarea
+              className="paste-box"
+              rows={2}
+              value=""
+              aria-label="Paste box"
+              placeholder={isTouch ? "Or tap and hold here, then tap Paste" : "Or click here and press ⌘V"}
+              onPaste={(e) => {
+                e.preventDefault();
+                applyPasted(e.clipboardData.getData("text/plain"));
+                e.currentTarget.blur();
+              }}
+              // Some keyboards insert text without a paste event; handle that too.
+              onChange={(e) => {
+                const text = e.target.value;
+                if (text.length > 20 || findLink(text)) applyPasted(text);
+              }}
+            />
+            <p className="muted paste-hint">Paste the chord sheet, then the page's link (in either order).</p>
             <details className="bookmarklet-help">
               <summary>⚡ One-click import from chord sites</summary>
               <ol>
@@ -211,6 +250,7 @@ export function Editor({ song }: { song?: Song }) {
         </div>
       ) : (
         <textarea className="editor-body" value={draft.body} placeholder={PLACEHOLDER} spellCheck={false}
+          onPaste={onBodyPaste}
           onChange={(e) => set("body", e.target.value)} rows={20} />
       )}
 

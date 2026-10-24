@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarkletSource, cleanSheet, decodeImport, extractMeta, isLink, titleFromPage } from "./importSheet";
+import { bookmarkletSource, cleanSheet, decodeImport, extractMeta, findLink, isLink, titleFromPage } from "./importSheet";
 
 describe("cleanSheet", () => {
   it("strips Ultimate Guitar markup and tidies whitespace", () => {
@@ -70,5 +70,20 @@ describe("bookmarklet round trip", () => {
   it("rejects malformed payloads", () => {
     expect(decodeImport("not json")).toBeNull();
     expect(decodeImport(encodeURIComponent(JSON.stringify({ text: "x", url: "javascript:1" })))).toEqual({ text: "x", url: undefined, title: undefined });
+  });
+});
+
+describe("findLink", () => {
+  it("finds the link in a bare URL or a shared snippet", () => {
+    const url = "https://tabs.ultimate-guitar.com/user/tab/view?h=abc123";
+    expect(findLink(url)).toBe(url);
+    expect(findLink(`Check out this tab on Ultimate Guitar: ${url}.`)).toBe(url);
+    expect(findLink(`Dyin' Tonight chords\n${url}`)).toBe(url);
+  });
+
+  it("treats chord sheets as sheets, even with a link inside", () => {
+    expect(findLink("Am   C\nThere is a house")).toBeNull();
+    const sheet = ["[Verse]", "G  C", "line one", "line two", "https://example.com/x"].join("\n");
+    expect(findLink(sheet)).toBeNull();
   });
 });
