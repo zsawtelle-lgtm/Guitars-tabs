@@ -9,6 +9,9 @@ import { metronome } from "../lib/metronome";
 import type { TabPlayback } from "./TabBlock";
 import { SongSheet } from "./SongSheet";
 import { StrumPanel, stopStrum } from "./StrumPanel";
+import { VideoPanel } from "./VideoPanel";
+import { formatTime } from "../lib/time";
+import { parseYouTubeId, type YTPlayer } from "../lib/youtube";
 import { ChordPopover, ChordStrip } from "./ChordViews";
 import { MetronomePanel, setMetronome, toggleMetronome } from "./MetronomePanel";
 
@@ -68,10 +71,45 @@ export function SongPage({ song }: { song: Song }) {
     });
   }, []);
 
+  // A linked recording, when playing with sync on, drives the scroll instead of autoscroll.
+  const playerRef = useRef<YTPlayer | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const hasVideo = !!parseYouTubeId(prefs.videoUrl);
+  const videoDriven = hasVideo && settings.videoSync;
+  const onVideoPlaying = useCallback((playing: boolean) => {
+    setVideoPlaying(playing);
+    if (!playing) return;
+    // Clicks and the strum loop won't line up with a recording, so silence them.
+    setScrolling(false);
+    stopStrum();
+    if (metronome.running) {
+      metronome.stop();
+      notifyMetronome();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!videoPlaying || !settings.videoSync) return;
+    let raf = 0;
+    const follow = () => {
+      const player = playerRef.current;
+      if (player) {
+        const start = prefs.videoStart ?? 0;
+        const end = prefs.videoEnd ?? player.getDuration();
+        const progress = end > start ? Math.min(1, Math.max(0, (player.getCurrentTime() - start) / (end - start))) : 0;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        window.scrollTo(0, progress * maxScroll);
+      }
+      raf = requestAnimationFrame(follow);
+    };
+    raf = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(raf);
+  }, [videoPlaying, settings.videoSync, prefs.videoStart, prefs.videoEnd]);
+
   const pxPerSec = speedToPxPerSec(prefs.scrollSpeed) * (prefs.fontSize / 16);
   // Autoscroll holds while a tab plays, so the tab gets its real time before the song moves on.
   useAutoScroll(scrolling && !(tabPlay && !tabPlay.loop), pxPerSec, () => setScrolling(false));
-  useWakeLock(scrolling || metro.running || !!tabPlay);
+  useWakeLock(scrolling || metro.running || !!tabPlay || videoPlaying);
 
   // Track where in the song you are. The focus point moves through the sheet in step
   // with the scroll position, so the first line is current at the top of the page and
@@ -202,11 +240,17 @@ export function SongPage({ song }: { song: Song }) {
   const setSpeed = useCallback((s: number) => setPrefs({ scrollSpeed: clampSpeed(s) }), [setPrefs]);
 
   const toggleScroll = useCallback(() => {
+    // With a synced recording, play/pause controls the recording and the scroll follows it.
+    if (videoDriven && playerRef.current) {
+      if (videoPlaying) playerRef.current.pauseVideo();
+      else playerRef.current.playVideo();
+      return;
+    }
     const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
     // Pressing play at the end starts the song over.
     if (!scrolling && atBottom) window.scrollTo(0, 0);
     setScrolling(!scrolling);
-  }, [scrolling]);
+  }, [scrolling, videoDriven, videoPlaying]);
 
   const fitToDuration = () => {
     if (!song.duration) return;
@@ -249,6 +293,7 @@ export function SongPage({ song }: { song: Song }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [prefs, setPrefs, setSpeed, toggleScroll]);
 
+  const moving = scrolling || (videoDriven && videoPlaying);
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const shownKey = song.key ? transposeChord(song.key, prefs.transpose) : undefined;
   const closePopover = useCallback(() => setPopover(null), []);
@@ -278,6 +323,18 @@ export function SongPage({ song }: { song: Song }) {
       </header>
 
       {showChords && <ChordStrip chords={chords} onSelect={setPopover} />}
+
+      <VideoPanel
+        key={song.id}
+        title={song.title}
+        artist={song.artist}
+        prefs={prefs}
+        setPrefs={setPrefs}
+        sync={settings.videoSync}
+        onSyncChange={(videoSync) => setSettings({ videoSync })}
+        playerRef={playerRef}
+        onPlayingChange={onVideoPlaying}
+      />
 
       {song.strum && (
         <StrumPanel key={song.id} pattern={song.strum} beatsPerBar={song.beatsPerBar ?? 4} chords={chords} />
@@ -362,9 +419,10 @@ export function SongPage({ song }: { song: Song }) {
 
         <nav className="toolbar" aria-label="Song tools">
           <div className="tool-group">
-            <button className={"scroll-btn" + (scrolling ? " active" : "")} onClick={toggleScroll}
-              aria-label={scrolling ? "Pause autoscroll" : "Start autoscroll"} title="Autoscroll (Space)">
-              {scrolling ? "❚❚" : "▶"}
+            <button className={"scroll-btn" + (moving ? " active" : "")} onClick={toggleScroll}
+              aria-label={videoDriven ? (moving ? "Pause recording" : "Play recording") : moving ? "Pause autoscroll" : "Start autoscroll"}
+              title={videoDriven ? "Play / pause the recording (Space)" : "Autoscroll (Space)"}>
+              {moving ? "❚❚" : "▶"}
             </button>
             <button className="icon-btn" onClick={() => setSpeed(prefs.scrollSpeed - 0.5)} aria-label="Slower">−</button>
             <button className={"speed-value" + (panel === "speed" ? " selected" : "")} onClick={() => togglePanel("speed")}
@@ -411,4 +469,3 @@ function Stepper({ value, onDec, onInc }: { value: string; onDec: () => void; on
 
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th");
-export const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;

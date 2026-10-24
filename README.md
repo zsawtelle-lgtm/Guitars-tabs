@@ -12,6 +12,7 @@ A chord and tab viewer in the spirit of Ultimate Guitar, built for playing along
   - **Loop**: ▶ repeats just that section until you stop it, at 50%, 75% or 100% tempo, for learning it. Autoscroll scrolls past it.
 - **Highlight progress** (toggle): the line you're on is highlighted, along with the word you're on (words already sung change color), lines already played are dimmed, and a thin bar above the toolbar shows how far through the song you are.
 - **Strumming patterns**: each song can have one bar of strumming (e.g. `D - D U - U D U`; D down, U up, - skip, x muted). It's shown as ↓ ↑ arrows with beat counts. ▶ loops it at the song's BPM on a synthesized guitar playing the chord you pick, with the current stroke lit up, an optional click, and −/+ tempo.
+- **Play along with a recording**: paste a YouTube link on any song (or use **Search YouTube** to find one). The toolbar ▶ then plays the recording, and the song scrolls and highlights in step with it. You can slow it to 0.5× or 0.75× for practice, and set where the lyrics start and end in the video so intros and outros don't throw off the sync. On wide screens the video docks in the corner once you scroll past it.
 - **Transpose** by semitone. Chords, the key and the diagrams all update, with barre shapes generated for any key.
 - **Chord library**: all 12 roots × 16 chord types, with multiple voicings.
 - **Your songs**: add or edit songs (edits to built-in songs are saved as your own copy). Paste chords-over-lyrics text straight from a website and it's understood as-is. Favorites and search.

@@ -24,6 +24,13 @@ export interface SongPrefs {
   /** Autoscroll speed, 1–10 (fractional steps allowed). */
   scrollSpeed: number;
   fontSize: number;
+  /** YouTube link for a recording to play along with. */
+  videoUrl?: string;
+  /** Where the song's first and last lines fall in the recording, in seconds. */
+  videoStart?: number;
+  videoEnd?: number;
+  /** Playback speed of the recording (0.5–1). */
+  videoRate?: number;
 }
 
 export const DEFAULT_PREFS: SongPrefs = { transpose: 0, scrollSpeed: 3, fontSize: 16 };
@@ -141,11 +148,13 @@ export interface PlaySettings {
   tabMode: TabMode;
   /** Tempo multiplier used when looping a tab for practice. */
   practiceSpeed: number;
+  /** Scroll the song (and its highlight) in step with a linked recording. */
+  videoSync: boolean;
 }
 
 export type TabMode = "song" | "loop";
 
-const DEFAULT_SETTINGS: PlaySettings = { highlight: true, tabTiming: true, tabMode: "song", practiceSpeed: 1 };
+const DEFAULT_SETTINGS: PlaySettings = { highlight: true, tabTiming: true, tabMode: "song", practiceSpeed: 1, videoSync: true };
 
 export function useSettings(): [PlaySettings, (patch: Partial<PlaySettings>) => void] {
   useStoreVersion();
