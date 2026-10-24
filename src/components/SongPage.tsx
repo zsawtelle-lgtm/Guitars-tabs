@@ -297,6 +297,21 @@ export function SongPage({ song }: { song: Song }) {
 
   const appleLink = parseAppleMusicUrl(prefs.appleMusicUrl);
   const moving = scrolling || (videoDriven && videoPlaying);
+
+  // A small scripting hook so something outside the page (e.g. a Mac Shortcut that also
+  // presses play in the Music app) can start and stop the song in the same instant.
+  useEffect(() => {
+    const api = {
+      play: () => !moving && toggleScroll(),
+      pause: () => moving && toggleScroll(),
+      toggle: () => toggleScroll(),
+      playing: moving,
+    };
+    window.fretboard = api;
+    return () => {
+      if (window.fretboard === api) delete window.fretboard;
+    };
+  }, [moving, toggleScroll]);
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const shownKey = song.key ? transposeChord(song.key, prefs.transpose) : undefined;
   const closePopover = useCallback(() => setPopover(null), []);
@@ -479,3 +494,10 @@ function Stepper({ value, onDec, onInc }: { value: string; onDec: () => void; on
 
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 const ordinal = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th");
+
+declare global {
+  interface Window {
+    /** Start/stop the open song from outside the page (see the Mac one-key start). */
+    fretboard?: { play(): void; pause(): void; toggle(): void; playing: boolean };
+  }
+}

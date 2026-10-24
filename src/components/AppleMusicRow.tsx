@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { appleMusicSearchUrl, parseAppleMusicUrl } from "../lib/appleMusic";
 import type { SongPrefs } from "../lib/storage";
+import { MacShortcutHelp } from "./MacShortcutHelp";
 
 interface Props {
   title: string;
@@ -14,6 +15,7 @@ export function AppleMusicRow({ title, artist, prefs, setPrefs }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [help, setHelp] = useState(false);
 
   if (link && !editing) {
     return (
@@ -22,6 +24,10 @@ export function AppleMusicRow({ title, artist, prefs, setPrefs }: Props) {
         <span className="strum-title">Apple Music</span>
         <a className="btn primary" href={link} target="_blank" rel="noreferrer">Open in Apple Music ↗</a>
         <span className="muted apple-hint">Start it there, then come back and press ▶ to autoscroll.</span>
+        <button type="button" className="btn apple-small" onClick={() => setHelp(true)}
+          title="Start Music and the autoscroll together with one keyboard shortcut">
+          ⌨ One-key start (Mac)
+        </button>
         <button type="button" className="btn apple-small" onClick={() => {
           setDraft(prefs.appleMusicUrl ?? "");
           setEditing(true);
@@ -29,6 +35,7 @@ export function AppleMusicRow({ title, artist, prefs, setPrefs }: Props) {
         <button type="button" className="btn apple-small" onClick={() => setPrefs({ appleMusicUrl: undefined })}>
           Remove
         </button>
+        {help && <MacShortcutHelp onClose={() => setHelp(false)} />}
       </section>
     );
   }
