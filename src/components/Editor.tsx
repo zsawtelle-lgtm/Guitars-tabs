@@ -4,10 +4,8 @@ import { BUILT_IN_SONGS } from "../data/songs";
 import { groupRows, parseSong, toInline } from "../lib/parser";
 import { SongSheet } from "./SongSheet";
 import { chordSearchLinks } from "../lib/catalog";
-import { bookmarkletSource, cleanSheet, describeMeta, extractMeta, findLink } from "../lib/importSheet";
-
-// Phones and tablets: no ⌘V, so instructions talk about tap-and-hold → Paste instead.
-const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+import { bookmarkletSource, describeMeta, readPasted } from "../lib/importSheet";
+import { isTouch, PasteBox } from "./PasteBox";
 
 const EMPTY: Song = { id: "", title: "", artist: "", body: "" };
 
@@ -36,9 +34,10 @@ export function Editor({ song }: { song?: Song }) {
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const applyPasted = useCallback((text: string) => {
-    if (!text.trim()) return;
-    const url = findLink(text);
-    if (url) {
+    const pasted = readPasted(text);
+    if (!pasted) return;
+    if (pasted.kind === "link") {
+      const url = pasted.url;
       setDraft((d) => ({ ...d, chordSource: url }));
       setNotice(
         `Saved ${new URL(url).hostname.replace(/^www\./, "")} as the chord source.` +
@@ -46,7 +45,7 @@ export function Editor({ song }: { song?: Song }) {
       );
       return;
     }
-    const { body, meta } = extractMeta(cleanSheet(text));
+    const { body, meta } = pasted;
     const hadSource = !!draftRef.current.chordSource;
     setDraft((d) => ({ ...d, body, key: meta.key ?? d.key, capo: meta.capo ?? d.capo, tempo: meta.tempo ?? d.tempo }));
     setPreview(true);
@@ -176,23 +175,8 @@ export function Editor({ song }: { song?: Song }) {
             <div className="source-links paste-row">
               <button type="button" className="btn primary" onClick={pasteFromClipboard}>📋 Paste from clipboard</button>
             </div>
-            <textarea
-              className="paste-box"
-              rows={2}
-              value=""
-              aria-label="Paste box"
-              placeholder={isTouch ? "Or tap and hold here, then tap Paste" : "Or click here and press ⌘V"}
-              onPaste={(e) => {
-                e.preventDefault();
-                applyPasted(e.clipboardData.getData("text/plain"));
-                e.currentTarget.blur();
-              }}
-              // Some keyboards insert text without a paste event; handle that too.
-              onChange={(e) => {
-                const text = e.target.value;
-                if (text.length > 20 || findLink(text)) applyPasted(text);
-              }}
-            />
+            <PasteBox label={isTouch ? "Or tap and hold here, then tap Paste" : "Or click here and press ⌘V"}
+              onText={applyPasted} />
             <p className="muted paste-hint">Paste the chord sheet, then the page's link (in either order).</p>
             <details className="bookmarklet-help">
               <summary>⚡ One-click import from chord sites</summary>

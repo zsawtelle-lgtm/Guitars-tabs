@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { cleanSheet, decodeImport, describeMeta, extractMeta, titleFromPage } from "../lib/importSheet";
+import { cleanSheet, decodeImport, describeMeta, extractMeta, titleFromPage, trimHeader } from "../lib/importSheet";
 import { groupRows, parseSong } from "../lib/parser";
 import { getImportTarget, getSong, getSongs, newSongId, saveSong, useStoreVersion } from "../lib/storage";
 import { SongSheet } from "./SongSheet";
@@ -9,7 +9,10 @@ const NEW = "__new__";
 export function ImportPage({ encoded }: { encoded: string }) {
   useStoreVersion();
   const payload = useMemo(() => decodeImport(encoded), [encoded]);
-  const { body, meta } = useMemo(() => extractMeta(cleanSheet(payload?.text ?? "")), [payload]);
+  const { body, meta } = useMemo(() => {
+    const r = extractMeta(cleanSheet(payload?.text ?? ""));
+    return { body: trimHeader(r.body), meta: r.meta };
+  }, [payload]);
   const rows = useMemo(() => groupRows(parseSong(body)), [body]);
   const songs = getSongs();
   const fromPage = titleFromPage(payload?.title ?? "");

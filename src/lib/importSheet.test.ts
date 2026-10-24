@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarkletSource, cleanSheet, decodeImport, extractMeta, findLink, isLink, titleFromPage } from "./importSheet";
+import { bookmarkletSource, cleanSheet, decodeImport, extractMeta, findLink, isLink, readPasted, titleFromPage, trimHeader } from "./importSheet";
 
 describe("cleanSheet", () => {
   it("strips Ultimate Guitar markup and tidies whitespace", () => {
@@ -85,5 +85,18 @@ describe("findLink", () => {
     expect(findLink("Am   C\nThere is a house")).toBeNull();
     const sheet = ["[Verse]", "G  C", "line one", "line two", "https://example.com/x"].join("\n");
     expect(findLink(sheet)).toBeNull();
+  });
+});
+
+describe("trimHeader / readPasted", () => {
+  it("drops chord-site header lines above the song", () => {
+    const copied = "Dyin' Tonight Chords\nby Test Artist\nDifficulty: novice\nTuning: E A D G B E\nKey: G\n\n[Verse 1]\nG    D\nDyin' tonight";
+    expect(readPasted(copied)).toEqual({ kind: "sheet", body: "[Verse 1]\nG    D\nDyin' tonight", meta: { key: "G" } });
+  });
+
+  it("keeps lines once the song has started, and plain lyric openings", () => {
+    expect(trimHeader("G   D\nBy the river\nTab of mine")).toBe("G   D\nBy the river\nTab of mine");
+    expect(trimHeader("Hello darkness my old friend")).toBe("Hello darkness my old friend");
+    expect(trimHeader("Am\nchords by me")).toBe("Am\nchords by me");
   });
 });

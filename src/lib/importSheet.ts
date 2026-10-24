@@ -24,6 +24,21 @@ export function cleanSheet(text: string): string {
     .replace(/^\n+|\n+$/g, "");
 }
 
+// Page furniture that chord sites put above the sheet ("Wonderwall Chords", "by Oasis",
+// "Difficulty: novice", "Tuning: E A D G B E"…).
+const HEADER_RE =
+  /^\s*(?:.*\b(?:chords|tabs?|ukulele)\b(?:\s+by\s+.*)?|by\s+.+|(?:difficulty|tuning|author|strumming|version|ver|rating|transcribed by)\b.*)\s*$/i;
+// The first line that's clearly part of the song: a [Section], a tab staff, or chords.
+const SONG_START_RE = /^\s*(?:\[[^\]]+\]|[A-Ga-g][#b]?\s*\|)|^\s*[A-G][#b]?(?:m|maj|min|dim|aug|sus|add|\d)*(?:\/[A-G][#b]?)?(?:\s+|$)/;
+
+/** Drops site header lines that come before the song itself. */
+export function trimHeader(text: string): string {
+  const lines = text.split("\n");
+  let i = 0;
+  while (i < lines.length && !SONG_START_RE.test(lines[i]) && (!lines[i].trim() || HEADER_RE.test(lines[i]))) i++;
+  return lines.slice(i).join("\n");
+}
+
 const META_RES: [keyof SheetMeta, RegExp][] = [
   ["key", /^\s*key\s*[:=-]?\s*([A-G][#b]?m?)\s*$/i],
   ["capo", /^\s*capo\s*[:=-]?\s*(?:on\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s*fret)?\s*$/i],
@@ -130,4 +145,16 @@ if(!s){alert('Fretboard: select the chord sheet first, then click the bookmark a
 var d={text:s,url:location.href,title:document.title};
 window.open(A+'#/import/'+encodeURIComponent(encodeURIComponent(JSON.stringify(d))),'_blank');})();`;
   return "javascript:" + encodeURIComponent(code.replace(/\n/g, ""));
+}
+
+export type Pasted = { kind: "link"; url: string } | { kind: "sheet"; body: string; meta: SheetMeta };
+
+/** Works out what was pasted: a page link (to record as the source) or a chord sheet. */
+export function readPasted(text: string): Pasted | null {
+  if (!text.trim()) return null;
+  const url = findLink(text);
+  if (url) return { kind: "link", url };
+  const { body, meta } = extractMeta(cleanSheet(text));
+  const trimmed = trimHeader(body);
+  return trimmed.trim() ? { kind: "sheet", body: trimmed, meta } : null;
 }

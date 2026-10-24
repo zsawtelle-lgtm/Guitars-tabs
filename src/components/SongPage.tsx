@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chordsInSong, groupRows, isContentRow, parseSong } from "../lib/parser";
 import { transposeChord } from "../lib/music";
 import {
-  getFavorites, setImportTarget, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song, type TabMode,
+  getFavorites, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song, type TabMode,
 } from "../lib/storage";
 import { notifyMetronome, pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMetronome, useWakeLock } from "../lib/hooks";
 import { metronome } from "../lib/metronome";
@@ -10,9 +10,9 @@ import type { TabPlayback } from "./TabBlock";
 import { SongSheet } from "./SongSheet";
 import { StrumPanel, stopStrum } from "./StrumPanel";
 import { VideoPanel } from "./VideoPanel";
+import { AddChordsPanel } from "./AddChordsPanel";
 import { AppleMusicRow } from "./AppleMusicRow";
 import { parseAppleMusicUrl } from "../lib/appleMusic";
-import { chordSearchLinks } from "../lib/catalog";
 import { formatTime } from "../lib/time";
 import { parseYouTubeId, type YTPlayer } from "../lib/youtube";
 import { ChordPopover, ChordStrip } from "./ChordViews";
@@ -370,24 +370,7 @@ export function SongPage({ song }: { song: Song }) {
         <StrumPanel key={song.id} pattern={song.strum} beatsPerBar={song.beatsPerBar ?? 4} chords={chords} />
       )}
 
-      {!lines.length && (
-        <div className="chord-source-panel no-chords">
-          <div>
-            <b>No chords yet</b>
-            <p className="muted">
-              Find a published chord sheet or tab for this song, then paste it in with <b>Edit</b> and save its link as the
-              chord source.
-            </p>
-            <div className="source-links">
-              {chordSearchLinks(song.title, song.artist).map((l) => (
-                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer"
-                  onClick={() => setImportTarget(song.id)}>{l.label} ↗</a>
-              ))}
-              <a className="btn primary" href={`#/edit/${encodeURIComponent(song.id)}`}>Edit →</a>
-            </div>
-          </div>
-        </div>
-      )}
+      {!lines.length && <AddChordsPanel song={song} />}
 
       <div ref={sheetRef}>
         <SongSheet

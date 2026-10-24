@@ -526,3 +526,5 @@ select {
 }
 .paste-box::placeholder { color: var(--muted); }
 .paste-hint { font-size: 0.82rem; margin: 6px 0 0; }
+.add-chords-steps { padding-left: 20px; margin: 8px 0; line-height: 1.6; font-size: 0.92rem; }
+.add-chords-steps li { margin-bottom: 6px; }
