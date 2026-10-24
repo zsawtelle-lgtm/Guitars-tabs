@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chordsInSong, groupRows, isContentRow, parseSong } from "../lib/parser";
 import { transposeChord } from "../lib/music";
 import {
-  getFavorites, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song, type TabMode,
+  getFavorites, setImportTarget, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song, type TabMode,
 } from "../lib/storage";
 import { notifyMetronome, pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMetronome, useWakeLock } from "../lib/hooks";
 import { metronome } from "../lib/metronome";
@@ -379,7 +379,8 @@ export function SongPage({ song }: { song: Song }) {
             </p>
             <div className="source-links">
               {chordSearchLinks(song.title, song.artist).map((l) => (
-                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer">{l.label} ↗</a>
+                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer"
+                  onClick={() => setImportTarget(song.id)}>{l.label} ↗</a>
               ))}
               <a className="btn primary" href={`#/edit/${encodeURIComponent(song.id)}`}>Edit →</a>
             </div>

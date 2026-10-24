@@ -5,6 +5,7 @@ import { Library } from "./components/Library";
 import { SongPage } from "./components/SongPage";
 import { Editor } from "./components/Editor";
 import { AddFromSearch } from "./components/AddFromSearch";
+import { ImportPage } from "./components/ImportPage";
 import { ChordLibrary } from "./components/ChordLibrary";
 import { MetronomePanel, toggleMetronome } from "./components/MetronomePanel";
 
@@ -14,6 +15,7 @@ type Route =
   | { name: "edit"; id: string }
   | { name: "new" }
   | { name: "add" }
+  | { name: "import"; data: string }
   | { name: "chords" }
   | { name: "metronome" };
 
@@ -29,6 +31,8 @@ function parseHash(hash: string): Route {
       return { name: "new" };
     case "add":
       return { name: "add" };
+    case "import":
+      return { name: "import", data: decoded };
     case "chords":
       return { name: "chords" };
     case "metronome":
@@ -74,6 +78,9 @@ export function App() {
       break;
     case "add":
       content = <AddFromSearch />;
+      break;
+    case "import":
+      content = <ImportPage key={route.data} encoded={route.data} />;
       break;
     case "chords":
       content = <ChordLibrary />;

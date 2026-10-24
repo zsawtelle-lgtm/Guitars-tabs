@@ -1,0 +1,119 @@
+// Turning a chord sheet copied from a website into song text, and picking up the
+// details the sheet itself states (key, capo, tempo). Nothing here is guessed:
+// a field is only filled when the sheet spells it out.
+import { isChord } from "./music";
+
+export interface SheetMeta {
+  key?: string;
+  capo?: number;
+  tempo?: number;
+}
+
+/** Normalizes copied text: line endings, odd spaces, Ultimate Guitar's [ch]/[tab] markup, extra blank lines. */
+export function cleanSheet(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[   ]/g, " ")
+    .replace(/​/g, "")
+    .replace(/\[\/?tab\]/gi, "")
+    .replace(/\[ch\](.*?)\[\/ch\]/gi, "$1")
+    .split("\n")
+    .map((l) => l.replace(/\s+$/, ""))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\n+|\n+$/g, "");
+}
+
+const META_RES: [keyof SheetMeta, RegExp][] = [
+  ["key", /^\s*key\s*[:=-]?\s*([A-G][#b]?m?)\s*$/i],
+  ["capo", /^\s*capo\s*[:=-]?\s*(?:on\s+)?(\d{1,2})(?:st|nd|rd|th)?(?:\s*fret)?\s*$/i],
+  ["capo", /^\s*capo\s*[:=-]?\s*(no\s*capo|none)\s*$/i],
+  ["tempo", /^\s*(?:tempo|bpm)\s*[:=-]?\s*(\d{2,3})\s*(?:bpm)?\s*$/i],
+];
+
+/** Pulls "Key: Am", "Capo: 2nd fret", "BPM: 96" lines out of a sheet. */
+export function extractMeta(text: string): { body: string; meta: SheetMeta } {
+  const meta: SheetMeta = {};
+  const kept: string[] = [];
+  for (const line of text.split("\n")) {
+    let matched = false;
+    for (const [field, re] of META_RES) {
+      const m = re.exec(line);
+      if (!m) continue;
+      const key = field === "key" ? m[1][0].toUpperCase() + m[1].slice(1) : "";
+      if (field === "key" && isChord(key)) meta.key = key;
+      else if (field === "capo") meta.capo = /\d/.test(m[1]) ? Number(m[1]) : 0;
+      else if (field === "tempo" && Number(m[1]) >= 30 && Number(m[1]) <= 300) meta.tempo = Number(m[1]);
+      else continue;
+      matched = true;
+      break;
+    }
+    if (!matched) kept.push(line);
+  }
+  return { body: kept.join("\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+/, ""), meta };
+}
+
+/** "Key Am · Capo 2 · 96 BPM", for telling you what was picked up from a sheet. */
+export function describeMeta(meta: SheetMeta): string {
+  return [
+    meta.key && `Key ${meta.key}`,
+    meta.capo !== undefined && (meta.capo ? `Capo ${meta.capo}` : "No capo"),
+    meta.tempo && `${meta.tempo} BPM`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function isLink(text: string): boolean {
+  const t = text.trim();
+  if (/\s/.test(t)) return false;
+  try {
+    const u = new URL(t);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Title and artist from a chord page's title, e.g. "AMAZING GRACE CHORDS by Judy Collins @ Ultimate-Guitar.Com". */
+export function titleFromPage(pageTitle: string): { title?: string; artist?: string } {
+  const m = /^(.*?)\s+(?:chords|tab|tabs|ukulele chords|bass tab)\s+by\s+(.*?)(?:\s+[@|–-]\s+.*)?$/i.exec(pageTitle.trim());
+  if (!m) return {};
+  const titleCase = (s: string) => (s === s.toUpperCase() ? s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : s);
+  return { title: titleCase(m[1].trim()), artist: m[2].trim() };
+}
+
+export interface ImportPayload {
+  text: string;
+  url?: string;
+  title?: string;
+}
+
+/** Reads the data a "Send to Fretboard" bookmark put in the URL. */
+export function decodeImport(encoded: string): ImportPayload | null {
+  try {
+    const data = JSON.parse(decodeURIComponent(encoded)) as Partial<ImportPayload>;
+    if (typeof data.text !== "string" || !data.text.trim()) return null;
+    return {
+      text: data.text,
+      url: typeof data.url === "string" && isLink(data.url) ? data.url : undefined,
+      title: typeof data.title === "string" ? data.title : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Source of the "Send to Fretboard" bookmarklet. Run on a chord page, it takes the
+ * selected text (or else the page's largest <pre>/<code> block, where chord sites
+ * keep the sheet) plus the page link, and opens this app's import screen with them.
+ */
+export function bookmarkletSource(appUrl: string): string {
+  const code = `(function(){var A=${JSON.stringify(appUrl)};var s=String(window.getSelection()).trim();
+if(!s){var b='';document.querySelectorAll('pre,code').forEach(function(e){var t=e.innerText||'';if(t.length>b.length)b=t;});s=b.trim();}
+if(!s){alert('Fretboard: select the chord sheet first, then click the bookmark again.');return;}
+var d={text:s,url:location.href,title:document.title};
+window.open(A+'#/import/'+encodeURIComponent(encodeURIComponent(JSON.stringify(d))),'_blank');})();`;
+  return "javascript:" + encodeURIComponent(code.replace(/\n/g, ""));
+}

@@ -49,6 +49,7 @@ const KEYS = {
   prefs: "fretboard.prefs",
   theme: "fretboard.theme",
   settings: "fretboard.settings",
+  importTarget: "fretboard.importTarget",
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -76,6 +77,13 @@ function emit() {
   version++;
   subscribers.forEach((fn) => fn());
 }
+// Keep other open tabs in step (e.g. a chord sheet imported in a new tab).
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key?.startsWith("fretboard.")) emit();
+  });
+}
+
 function subscribe(fn: () => void) {
   subscribers.add(fn);
   return () => subscribers.delete(fn);
@@ -172,4 +180,16 @@ export function useSettings(): [PlaySettings, (patch: Partial<PlaySettings>) => 
     [],
   );
   return [settings, update];
+}
+
+/** The song a chord sheet import should go into (set when you open a chord site from that song). */
+export function getImportTarget(): string | undefined {
+  return read<string | null>(KEYS.importTarget, null) ?? undefined;
+}
+export function setImportTarget(id: string): void {
+  try {
+    localStorage.setItem(KEYS.importTarget, JSON.stringify(id));
+  } catch {
+    // Not critical: the import screen just asks which song.
+  }
 }

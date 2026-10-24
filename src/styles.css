@@ -494,3 +494,22 @@ select {
   .catalog-art { width: 48px; height: 48px; }
   .catalog-time { display: none; }
 }
+
+/* ---------- Pasting / importing chord sheets ---------- */
+.paste-row { align-items: center; margin-top: 10px; }
+.paste-row .muted { font-size: 0.85rem; }
+.paste-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; font-size: 0.9rem;
+  background: var(--chord-hover-bg); border: 1px solid var(--accent);
+}
+.paste-notice .icon-btn { min-width: 28px; height: 28px; font-size: 1rem; }
+.bookmarklet-help { margin-top: 10px; font-size: 0.88rem; }
+.bookmarklet-help summary { cursor: pointer; font-weight: 700; }
+.bookmarklet-help ol { padding-left: 20px; line-height: 1.6; }
+.btn.bookmarklet { cursor: grab; border-style: dashed; border-color: var(--accent); color: var(--accent); }
+.import-target { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 16px 0 8px; }
+.import-target .field { min-width: 200px; }
+.import-target select, .import-target input {
+  padding: 9px 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem;
+}

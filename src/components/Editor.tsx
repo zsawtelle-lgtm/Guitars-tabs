@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
-import { deleteSong, newSongId, saveSong, type Song } from "../lib/storage";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { deleteSong, newSongId, saveSong, setImportTarget, type Song } from "../lib/storage";
 import { BUILT_IN_SONGS } from "../data/songs";
 import { groupRows, parseSong, toInline } from "../lib/parser";
 import { SongSheet } from "./SongSheet";
 import { chordSearchLinks } from "../lib/catalog";
+import { bookmarkletSource, cleanSheet, describeMeta, extractMeta, isLink } from "../lib/importSheet";
 
 const EMPTY: Song = { id: "", title: "", artist: "", body: "" };
 
@@ -25,6 +26,59 @@ export function Editor({ song }: { song?: Song }) {
   const isUserCopy = song && !song.builtIn;
 
   const set = <K extends keyof Song>(key: K, value: Song[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Whatever you copied on the chord site: a page link becomes the chord source, and a
+  // chord sheet becomes the song text (with any key/capo/tempo the sheet lists).
+  const applyPasted = useCallback((text: string) => {
+    if (!text.trim()) return;
+    if (isLink(text)) {
+      const url = text.trim();
+      setDraft((d) => ({ ...d, chordSource: url }));
+      setNotice(`Saved ${new URL(url).hostname.replace(/^www\./, "")} as the chord source.`);
+      return;
+    }
+    const { body, meta } = extractMeta(cleanSheet(text));
+    let hadSource = false;
+    setDraft((d) => {
+      hadSource = !!d.chordSource;
+      return { ...d, body, key: meta.key ?? d.key, capo: meta.capo ?? d.capo, tempo: meta.tempo ?? d.tempo };
+    });
+    setPreview(true);
+    const found = describeMeta(meta);
+    const lines = body.split("\n").length;
+    setNotice(
+      `Pasted ${lines} line${lines === 1 ? "" : "s"}.` +
+        (found ? ` From the sheet: ${found}.` : "") +
+        (hadSource ? "" : " Now copy the chord page's link and paste it too, to record the source."),
+    );
+  }, []);
+
+  const pasteFromClipboard = () => {
+    if (!navigator.clipboard?.readText) {
+      setNotice("This browser can't read the clipboard from a button. Press ⌘V (Ctrl+V) on this page instead.");
+      return;
+    }
+    navigator.clipboard.readText().then(applyPasted, () =>
+      setNotice("The browser didn't allow reading the clipboard. Press ⌘V (Ctrl+V) on this page instead."),
+    );
+  };
+
+  // ⌘V anywhere on the page (outside a text box) pastes straight in.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, [contenteditable]")) return;
+      const text = e.clipboardData?.getData("text/plain");
+      if (!text) return;
+      e.preventDefault();
+      applyPasted(text);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [applyPasted]);
+
+  const appUrl = location.origin + location.pathname;
   const num = (v: string) => (v.trim() === "" ? undefined : Number(v));
 
   const save = (e: React.FormEvent) => {
@@ -92,15 +146,51 @@ export function Editor({ song }: { song?: Song }) {
             </p>
             <div className="source-links">
               {chordSearchLinks(draft.title, draft.artist).map((l) => (
-                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer">{l.label} ↗</a>
+                <a key={l.label} className="btn" href={l.url} target="_blank" rel="noreferrer"
+                  onClick={() => draft.id && setImportTarget(draft.id)}>{l.label} ↗</a>
               ))}
             </div>
+            <div className="source-links paste-row">
+              <button type="button" className="btn primary" onClick={pasteFromClipboard}>📋 Paste from clipboard</button>
+              <span className="muted">or press ⌘V on this page. Paste the sheet, then the page link.</span>
+            </div>
+            <details className="bookmarklet-help">
+              <summary>⚡ One-click import from chord sites</summary>
+              <ol>
+                <li>
+                  Drag this button to your bookmarks bar:{" "}
+                  <a className="btn bookmarklet" ref={(el) => el?.setAttribute("href", bookmarkletSource(appUrl))}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setNotice("Drag the “Send to Fretboard” button onto your bookmarks bar, then use it on a chord page.");
+                    }}>
+                    ⚡ Send to Fretboard
+                  </a>{" "}
+                  <button type="button" className="btn apple-small"
+                    onClick={() => void navigator.clipboard?.writeText(bookmarkletSource(appUrl)).then(() =>
+                      setNotice("Bookmark code copied. Make a new bookmark and paste it in as the address."))}>
+                    Copy code
+                  </button>
+                </li>
+                <li>Open the chord site from the buttons above, and go to the song's chord page.</li>
+                <li>
+                  Click <b>Send to Fretboard</b> in your bookmarks. It takes the chord sheet (or just the part you've
+                  selected) and the page link, and brings them back here for this song.
+                </li>
+              </ol>
+            </details>
           </div>
           <label className="field">Chord source link
             <input type="url" value={draft.chordSource ?? ""} placeholder="https://…"
               onChange={(e) => set("chordSource", e.target.value.trim() || undefined)} />
           </label>
         </div>
+      )}
+
+      {notice && (
+        <p className="paste-notice" role="status">
+          {notice} <button type="button" className="icon-btn" onClick={() => setNotice(null)} aria-label="Dismiss">×</button>
+        </p>
       )}
 
       <div className="editor-body-head">
