@@ -376,3 +376,35 @@ select {
   background: var(--accent); color: var(--accent-text); box-shadow: 0 0 0 2px var(--accent);
 }
 .sheet-row.current .word.now .chord { text-decoration: underline 2px; text-underline-offset: 3px; }
+
+/* ---------- Strumming pattern ---------- */
+.strum-card {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.strum-card.playing { border-color: var(--accent); }
+.strum-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.strum-card.playing .strum-play { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.strum-title { font-weight: 700; }
+.strum-bpm .icon-btn { min-width: 30px; height: 30px; font-size: 1rem; }
+.strum-bpm .stepper-value { min-width: 36px; }
+.strum-unit { font-size: 0.8rem; margin-left: -6px; }
+.strum-pattern { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 4px; }
+.stroke {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 38px; padding: 6px 0 4px; border-radius: 8px; background: var(--surface-2);
+  transition: background 60ms, transform 60ms;
+}
+.stroke.beat:not(:first-child) { margin-left: 8px; }
+.stroke-glyph { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.stroke-D .stroke-glyph, .stroke-U .stroke-glyph { color: var(--text); }
+.stroke-rest .stroke-glyph { color: var(--muted); }
+.stroke-x .stroke-glyph { color: var(--danger); font-size: 1.1rem; }
+.stroke-count { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+.stroke.beat .stroke-count { color: var(--text); }
+.stroke.on { background: var(--accent); transform: scale(1.08); }
+.stroke.on .stroke-glyph, .stroke.on .stroke-count { color: var(--accent-text); }
+.strum-chords { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.85rem; }
+.strum-chords .chord-pill { border: 1px solid transparent; cursor: pointer; }
+.strum-chords .chord-pill.selected { border-color: var(--chord); }
+@media (max-width: 560px) { .stroke { width: 32px; } .stroke.beat:not(:first-child) { margin-left: 4px; } }

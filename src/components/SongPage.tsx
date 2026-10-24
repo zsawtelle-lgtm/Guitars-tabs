@@ -8,6 +8,7 @@ import { notifyMetronome, pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMe
 import { metronome } from "../lib/metronome";
 import type { TabPlayback } from "./TabBlock";
 import { SongSheet } from "./SongSheet";
+import { StrumPanel, stopStrum } from "./StrumPanel";
 import { ChordPopover, ChordStrip } from "./ChordViews";
 import { MetronomePanel, setMetronome, toggleMetronome } from "./MetronomePanel";
 
@@ -143,6 +144,7 @@ export function SongPage({ song }: { song: Song }) {
     setTabPlay(null);
   }, []);
   const startTab = useCallback((row: number, loop: boolean, speed = 1) => {
+    stopStrum();
     if (loop && speed !== 1) {
       savedBpm.current = metronome.bpm;
       metronome.bpm = Math.max(30, Math.round(metronome.bpm * speed));
@@ -276,6 +278,10 @@ export function SongPage({ song }: { song: Song }) {
       </header>
 
       {showChords && <ChordStrip chords={chords} onSelect={setPopover} />}
+
+      {song.strum && (
+        <StrumPanel key={song.id} pattern={song.strum} beatsPerBar={song.beatsPerBar ?? 4} chords={chords} />
+      )}
 
       <div ref={sheetRef}>
         <SongSheet

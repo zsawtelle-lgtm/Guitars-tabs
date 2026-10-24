@@ -65,6 +65,11 @@ export function Editor({ song }: { song?: Song }) {
           <input type="number" min={1} max={12} value={draft.beatsPerBar ?? ""}
             onChange={(e) => set("beatsPerBar", num(e.target.value))} />
         </label>
+        <label className="field wide">Strumming pattern
+          <input value={draft.strum ?? ""} placeholder="D - D U - U D U"
+            title="One bar: D = down, U = up, - = skip, x = muted. Spaces optional."
+            onChange={(e) => set("strum", e.target.value || undefined)} />
+        </label>
         <label className="field">Length (m:ss)
           <input placeholder="3:30" defaultValue={draft.duration ? `${Math.floor(draft.duration / 60)}:${String(draft.duration % 60).padStart(2, "0")}` : ""}
             onChange={(e) => set("duration", parseDuration(e.target.value))} />

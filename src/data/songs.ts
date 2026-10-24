@@ -9,6 +9,7 @@ export const BUILT_IN_SONGS: Song[] = [
     key: "Am",
     tempo: 76,
     beatsPerBar: 3,
+    strum: "D - D U D U",
     duration: 210,
     builtIn: true,
     body: `[Intro]
@@ -54,6 +55,7 @@ In the [Am]House of the [E]Rising [Am]Sun [C] [D] [F] [Am] [E] [Am] [E]
     key: "G",
     tempo: 80,
     beatsPerBar: 3,
+    strum: "D - D U D U",
     duration: 180,
     builtIn: true,
     body: `[Verse 1]
@@ -87,6 +89,7 @@ Than [Em]when we'd [D]first be[G]gun`,
     key: "C",
     tempo: 112,
     beatsPerBar: 4,
+    strum: "D - D U - U D U",
     duration: 150,
     builtIn: true,
     body: `[Verse 1]
@@ -120,6 +123,7 @@ F                  C              G
     key: "Am",
     tempo: 96,
     beatsPerBar: 3,
+    strum: "D - D U D U",
     duration: 190,
     builtIn: true,
     body: `[Verse 1]
@@ -147,6 +151,7 @@ Be[Am]tween the [C]salt water [G]and the sea strand
     key: "Am",
     tempo: 84,
     beatsPerBar: 3,
+    strum: "D - D - D U",
     duration: 200,
     builtIn: true,
     body: `[Verse]
@@ -168,6 +173,7 @@ And [Am]who but my [E]lady [Am]Greensleeves`,
     key: "G",
     tempo: 100,
     beatsPerBar: 4,
+    strum: "D - D U - U D U",
     duration: 170,
     builtIn: true,
     body: `[Verse 1]
@@ -197,6 +203,7 @@ And the one who has loved you so true`,
     key: "G",
     tempo: 120,
     beatsPerBar: 4,
+    strum: "D - D U x U D U",
     duration: 120,
     builtIn: true,
     body: `[Verse 1]

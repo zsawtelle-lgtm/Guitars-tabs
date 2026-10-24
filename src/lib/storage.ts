@@ -10,6 +10,8 @@ export interface Song {
   /** Beats per minute, used to preset the metronome. */
   tempo?: number;
   beatsPerBar?: number;
+  /** One bar of strumming, e.g. "D - D U - U D U" (D down, U up, - skip, x muted). */
+  strum?: string;
   /** Song length in seconds, used by "fit scroll to song length". */
   duration?: number;
   body: string;
