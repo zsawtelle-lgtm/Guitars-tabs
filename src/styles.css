@@ -313,3 +313,47 @@ select {
 }
 .editor-actions { display: flex; gap: 8px; margin-top: 16px; }
 @media (max-width: 400px) { .field.wide { grid-column: 1 / -1; } }
+
+/* ---------- Play-along: progress highlight ---------- */
+:root { --hl-bg: rgba(255, 200, 61, 0.1); }
+:root[data-theme="light"] { --hl-bg: rgba(242, 180, 0, 0.14); }
+
+.sheet-row {
+  margin: 0 -10px; padding: 0 10px; border-radius: 8px;
+  border-left: 3px solid transparent;
+  transition: background 200ms, opacity 300ms, border-color 200ms;
+}
+.sheet-row .sheet-line.has-chords { margin-top: 0; }
+.sheet-row:has(.has-chords) { padding-top: 0.35em; }
+.sheet-row.current { background: var(--hl-bg); border-left-color: var(--accent); }
+.sheet-row.played { opacity: 0.45; }
+
+.song-progress { height: 3px; background: var(--surface-2); }
+.song-progress-fill { height: 100%; width: 0; background: var(--accent); }
+
+/* ---------- Play-along: tab timing ---------- */
+.tab-block { padding: 4px 0; }
+.tab-transport {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  font-family: var(--sans); font-size: 0.8rem;
+}
+.tab-play {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.7rem;
+}
+.tab-block.playing .tab-play { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.tab-progress {
+  flex: 1; max-width: 260px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden;
+}
+.tab-progress-fill { height: 100%; width: 0; background: var(--accent); border-radius: 3px; }
+.tab-label { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tab-scroll { position: relative; overflow-x: auto; }
+.tab-scroll .sheet-tab { overflow: visible; }
+.tab-cursor {
+  position: absolute; top: 0; bottom: 0; width: 1ch; pointer-events: none;
+  background: rgba(255, 200, 61, 0.28); border-left: 2px solid var(--accent); border-radius: 2px;
+}
+.tab-cursor.waiting { animation: tab-wait 0.6s ease-in-out infinite alternate; }
+@keyframes tab-wait { from { opacity: 0.25; } to { opacity: 1; } }
+.tab-chords { position: relative; height: 1.35em; }
+.tab-chords .chord { position: absolute; top: 0; white-space: nowrap; }

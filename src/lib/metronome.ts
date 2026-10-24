@@ -42,6 +42,21 @@ export class Metronome {
     this.timer = null;
   }
 
+  /**
+   * When the next bar starts, in performance.now() milliseconds. Starting from
+   * silence, the first bar is a count-in, so this is one bar after the first click.
+   */
+  nextDownbeat(): number {
+    this.start();
+    const ctx = this.ctx!;
+    const secondsPerBeat = 60 / this.bpm;
+    const beatsLeft = (this.beatsPerBar - this.beat) % this.beatsPerBar;
+    const at = this.nextTime + beatsLeft * secondsPerBeat;
+    // Account for the delay between scheduling a sound and hearing it.
+    const latency = (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
+    return performance.now() + (at - ctx.currentTime + latency) * 1000;
+  }
+
   toggle(): void {
     if (this.running) this.stop();
     else this.start();

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { deleteSong, newSongId, saveSong, type Song } from "../lib/storage";
 import { BUILT_IN_SONGS } from "../data/songs";
-import { parseSong, toInline } from "../lib/parser";
+import { groupRows, parseSong, toInline } from "../lib/parser";
 import { SongSheet } from "./SongSheet";
 
 const EMPTY: Song = { id: "", title: "", artist: "", body: "" };
@@ -19,7 +19,7 @@ e|---0---1---3---|  <- tab lines are kept as-is`;
 export function Editor({ song }: { song?: Song }) {
   const [draft, setDraft] = useState<Song>(song ?? EMPTY);
   const [preview, setPreview] = useState(false);
-  const lines = useMemo(() => parseSong(draft.body), [draft.body]);
+  const rows = useMemo(() => groupRows(parseSong(draft.body)), [draft.body]);
   const original = song && BUILT_IN_SONGS.find((s) => s.id === song.id);
   const isUserCopy = song && !song.builtIn;
 
@@ -84,7 +84,7 @@ export function Editor({ song }: { song?: Song }) {
 
       {preview ? (
         <div className="editor-preview">
-          <SongSheet lines={lines} transpose={0} fontSize={15} />
+          <SongSheet rows={rows} transpose={0} fontSize={15} />
         </div>
       ) : (
         <textarea className="editor-body" value={draft.body} placeholder={PLACEHOLDER} spellCheck={false}

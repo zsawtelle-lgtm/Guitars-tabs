@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { chordsInSong, parseSong } from "../lib/parser";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { chordsInSong, groupRows, isContentRow, parseSong } from "../lib/parser";
 import { transposeChord } from "../lib/music";
-import { getFavorites, toggleFavorite, useSongPrefs, useStoreVersion, type Song } from "../lib/storage";
-import { pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMetronome, useWakeLock } from "../lib/hooks";
+import { getFavorites, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song } from "../lib/storage";
+import { notifyMetronome, pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMetronome, useWakeLock } from "../lib/hooks";
+import { metronome } from "../lib/metronome";
+import type { TabPlayback } from "./TabBlock";
 import { SongSheet } from "./SongSheet";
 import { ChordPopover, ChordStrip } from "./ChordViews";
 import { MetronomePanel, setMetronome, toggleMetronome } from "./MetronomePanel";
@@ -22,16 +24,100 @@ export function SongPage({ song }: { song: Song }) {
   const [popover, setPopover] = useState<string | null>(null);
   const metro = useMetronome();
 
+  const [settings, setSettings] = useSettings();
   const lines = useMemo(() => parseSong(song.body), [song.body]);
+  const rows = useMemo(() => groupRows(lines), [lines]);
   const chords = useMemo(
     () => [...new Set(chordsInSong(lines).map((c) => transposeChord(c, prefs.transpose)))],
     [lines, prefs.transpose],
   );
   const favorite = getFavorites().includes(song.id);
 
+  const [activeRow, setActiveRow] = useState(-1);
+  const [tabPlay, setTabPlay] = useState<TabPlayback | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const playedTabs = useRef(new Set<number>());
+  const progressRef = useRef<HTMLDivElement>(null);
+
   const pxPerSec = speedToPxPerSec(prefs.scrollSpeed) * (prefs.fontSize / 16);
-  useAutoScroll(scrolling, pxPerSec, () => setScrolling(false));
-  useWakeLock(scrolling || metro.running);
+  // Autoscroll holds while a tab plays, so the tab gets its real time before the song moves on.
+  useAutoScroll(scrolling && !tabPlay, pxPerSec, () => setScrolling(false));
+  useWakeLock(scrolling || metro.running || !!tabPlay);
+
+  // Track where in the song you are. The focus point moves through the sheet in step
+  // with the scroll position, so the first line is current at the top of the page and
+  // the last line at the bottom.
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const doc = document.documentElement;
+      const maxScroll = doc.scrollHeight - window.innerHeight;
+      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
+      if (progressRef.current) progressRef.current.style.width = `${progress * 100}%`;
+      const rect = sheet.getBoundingClientRect();
+      const focus = rect.top + progress * rect.height;
+      let current = -1;
+      for (const el of sheet.querySelectorAll<HTMLElement>("[data-content]")) {
+        current = Number(el.dataset.row);
+        if (el.getBoundingClientRect().bottom >= focus) break;
+      }
+      setActiveRow(current);
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [rows, prefs.fontSize, showChords]);
+
+  // Once a tab has been played through, "you are here" moves on to the next line
+  // rather than waiting for the scroll position to catch up.
+  let shownRow = activeRow;
+  if (!tabPlay && rows[activeRow]?.kind === "tabblock" && playedTabs.current.has(activeRow)) {
+    const next = rows.findIndex((r, i) => i > activeRow && isContentRow(r));
+    if (next >= 0) shownRow = next;
+  }
+
+  // Tab playback locks onto the metronome: it starts on the next bar (after a
+  // count-in bar if the metronome was silent) and stops the click again if it started it.
+  const startedMetro = useRef(false);
+  const startTab = useCallback((row: number) => {
+    startedMetro.current = !metronome.running;
+    const start = metronome.nextDownbeat();
+    notifyMetronome();
+    setTabPlay({ row, start, bpm: metronome.bpm, beatsPerBar: metronome.beatsPerBar });
+  }, []);
+  const stopTab = useCallback(() => {
+    if (startedMetro.current) {
+      metronome.stop();
+      notifyMetronome();
+      startedMetro.current = false;
+    }
+    setTabPlay(null);
+  }, []);
+  useEffect(() => () => {
+    if (startedMetro.current) metronome.stop();
+  }, []);
+
+  // While autoscrolling, play each tab block in time as the song reaches it.
+  useEffect(() => {
+    // Scrolling back above a tab lets it play again next time through.
+    for (const r of playedTabs.current) if (r > activeRow) playedTabs.current.delete(r);
+    if (!scrolling || !settings.tabTiming || tabPlay) return;
+    if (rows[activeRow]?.kind === "tabblock" && !playedTabs.current.has(activeRow)) {
+      playedTabs.current.add(activeRow);
+      startTab(activeRow);
+    }
+  }, [activeRow, scrolling, settings.tabTiming, tabPlay, rows, startTab]);
 
   // Preset the metronome to this song's tempo unless it's already clicking.
   useEffect(() => {
@@ -59,7 +145,7 @@ export function SongPage({ song }: { song: Song }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (t.closest?.("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
       switch (e.key) {
         case " ":
           e.preventDefault();
@@ -119,10 +205,28 @@ export function SongPage({ song }: { song: Song }) {
 
       {showChords && <ChordStrip chords={chords} onSelect={setPopover} />}
 
-      <SongSheet lines={lines} transpose={prefs.transpose} fontSize={prefs.fontSize} onChordClick={setPopover} />
+      <div ref={sheetRef}>
+        <SongSheet
+          rows={rows}
+          transpose={prefs.transpose}
+          fontSize={prefs.fontSize}
+          onChordClick={setPopover}
+          activeRow={settings.highlight ? shownRow : -1}
+          tabTiming={settings.tabTiming}
+          tabPlayback={tabPlay}
+          onTabPlay={startTab}
+          onTabStop={stopTab}
+          onTabDone={stopTab}
+        />
+      </div>
       <div className="sheet-end">— End —</div>
 
       <div className="toolbar-wrap">
+        {settings.highlight && (
+          <div className="song-progress" aria-hidden>
+            <div className="song-progress-fill" ref={progressRef} />
+          </div>
+        )}
         {panel && (
           <div className="toolbar-panel">
             {panel === "speed" && (
@@ -148,12 +252,25 @@ export function SongPage({ song }: { song: Song }) {
             )}
             {panel === "text" && (
               <div className="panel-row">
-                <span className="panel-label">Text size</span>
+                <span className="panel-label">View</span>
                 <Stepper value={`${prefs.fontSize}px`} onDec={() => setPrefs({ fontSize: Math.max(11, prefs.fontSize - 1) })}
                   onInc={() => setPrefs({ fontSize: Math.min(32, prefs.fontSize + 1) })} />
                 <label className="field-inline">
                   <input type="checkbox" checked={showChords} onChange={(e) => setShowChords(e.target.checked)} />
                   Chord diagrams
+                </label>
+                <label className="field-inline" title="Highlight the line you're on and show song progress">
+                  <input type="checkbox" checked={settings.highlight}
+                    onChange={(e) => setSettings({ highlight: e.target.checked })} />
+                  Highlight progress
+                </label>
+                <label className="field-inline" title="Play tab sections in time with a moving cursor">
+                  <input type="checkbox" checked={settings.tabTiming}
+                    onChange={(e) => {
+                      setSettings({ tabTiming: e.target.checked });
+                      if (!e.target.checked) stopTab();
+                    }} />
+                  Tab timing
                 </label>
               </div>
             )}
@@ -178,7 +295,7 @@ export function SongPage({ song }: { song: Song }) {
           <div className="tool-group">
             <ToolButton label="Transpose" value={signed(prefs.transpose)} selected={panel === "transpose"}
               onClick={() => togglePanel("transpose")} />
-            <ToolButton label="Text" value="Aa" selected={panel === "text"} onClick={() => togglePanel("text")} />
+            <ToolButton label="View" value="Aa" selected={panel === "text"} onClick={() => togglePanel("text")} />
             <ToolButton label="Metronome" value={metro.running ? `${metro.bpm}` : "♩"} selected={panel === "metronome"}
               active={metro.running} onClick={() => togglePanel("metronome")} />
           </div>

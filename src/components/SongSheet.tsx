@@ -1,28 +1,58 @@
 import { memo, type ReactNode } from "react";
-import type { Line, Segment } from "../lib/parser";
+import { isContentRow, type Row, type Segment } from "../lib/parser";
 import { transposeChord } from "../lib/music";
+import { TabBlock, type TabPlayback } from "./TabBlock";
 
 interface Props {
-  lines: Line[];
+  rows: Row[];
   transpose: number;
   fontSize: number;
   onChordClick?: (chord: string) => void;
+  /** Row to highlight as "you are here"; -1 for none. Earlier content rows are dimmed. */
+  activeRow?: number;
+  tabTiming?: boolean;
+  tabPlayback?: TabPlayback | null;
+  onTabPlay?: (row: number) => void;
+  onTabStop?: () => void;
+  onTabDone?: () => void;
 }
 
-export const SongSheet = memo(function SongSheet({ lines, transpose, fontSize, onChordClick }: Props) {
+export const SongSheet = memo(function SongSheet({
+  rows, transpose, fontSize, onChordClick, activeRow = -1, tabTiming = false, tabPlayback = null,
+  onTabPlay, onTabStop, onTabDone,
+}: Props) {
   return (
     <div className="sheet" style={{ fontSize }}>
-      {lines.map((line, i) => {
-        switch (line.kind) {
+      {rows.map((row, i) => {
+        const content = isContentRow(row);
+        const state = !content || activeRow < 0 ? "" : i === activeRow ? " current" : i < activeRow ? " played" : "";
+        const rowProps = { "data-row": i, "data-content": content || undefined };
+        switch (row.kind) {
           case "blank":
-            return <div key={i} className="sheet-blank" />;
+            return <div key={i} {...rowProps} className="sheet-blank" />;
           case "section":
-            return <div key={i} className="sheet-section">[{line.label}]</div>;
-          case "tab":
-            return <pre key={i} className="sheet-tab">{line.text}</pre>;
+            return <div key={i} {...rowProps} className="sheet-section">[{row.label}]</div>;
+          case "tabblock":
+            return (
+              <div key={i} {...rowProps} className={"sheet-row" + state}>
+                <TabBlock
+                  lines={row.lines}
+                  chords={row.chords}
+                  transpose={transpose}
+                  onChordClick={onChordClick}
+                  timing={tabTiming}
+                  playback={tabPlayback?.row === i ? tabPlayback : null}
+                  onPlay={() => onTabPlay?.(i)}
+                  onStop={() => onTabStop?.()}
+                  onDone={() => onTabDone?.()}
+                />
+              </div>
+            );
           case "lyric":
             return (
-              <LyricLine key={i} segments={line.segments} transpose={transpose} onChordClick={onChordClick} />
+              <div key={i} {...rowProps} className={"sheet-row" + state}>
+                <LyricLine segments={row.segments} transpose={transpose} onChordClick={onChordClick} />
+              </div>
             );
         }
       })}

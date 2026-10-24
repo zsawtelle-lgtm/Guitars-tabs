@@ -16,6 +16,8 @@ export type Line =
   | { kind: "lyric"; segments: Segment[] }
   | { kind: "section"; label: string }
   | { kind: "tab"; text: string }
+  /** A chord-only line sitting directly above a tab, naming the chords played in it. */
+  | { kind: "tabchords"; text: string }
   | { kind: "blank" };
 
 const SECTION_RE = /^\s*\[([^\]]+)\]\s*$/;
@@ -121,7 +123,9 @@ export function parseSong(body: string): Line[] {
     }
     if (isChordOnlyLine(raw)) {
       const next = src[i + 1]?.replace(/\s+$/, "");
-      if (next !== undefined && isPlainLyric(next)) {
+      if (next !== undefined && TAB_RE.test(next)) {
+        lines.push({ kind: "tabchords", text: raw });
+      } else if (next !== undefined && isPlainLyric(next)) {
         lines.push({ kind: "lyric", segments: mergeChordLine(raw, next) });
         i++;
       } else {
@@ -141,8 +145,8 @@ export function parseSong(body: string): Line[] {
 export function chordsInSong(lines: Line[]): string[] {
   const seen = new Set<string>();
   for (const l of lines) {
-    if (l.kind !== "lyric") continue;
-    for (const s of l.segments) if (s.chord) seen.add(s.chord);
+    if (l.kind === "lyric") for (const s of l.segments) if (s.chord) seen.add(s.chord);
+    if (l.kind === "tabchords") for (const { chord } of chordColumns(l.text)) seen.add(chord);
   }
   return [...seen];
 }
@@ -157,10 +161,59 @@ export function toInline(body: string): string {
         case "section":
           return `[${l.label}]`;
         case "tab":
+        case "tabchords":
           return l.text;
         case "lyric":
           return l.segments.map((s) => (s.chord ? `[${s.chord}]` : "") + s.text).join("").trimEnd();
       }
     })
     .join("\n");
+}
+
+/** A renderable row: consecutive tab lines are grouped into one block. */
+export type Row =
+  | Exclude<Line, { kind: "tab" | "tabchords" }>
+  | { kind: "tabblock"; lines: string[]; chords?: { col: number; chord: string }[] };
+
+export function groupRows(lines: Line[]): Row[] {
+  const rows: Row[] = [];
+  for (const line of lines) {
+    const prev = rows[rows.length - 1];
+    if (line.kind === "tabchords") rows.push({ kind: "tabblock", lines: [], chords: chordColumns(line.text) });
+    else if (line.kind !== "tab") rows.push(line);
+    else if (prev?.kind === "tabblock") prev.lines.push(line.text);
+    else rows.push({ kind: "tabblock", lines: [line.text] });
+  }
+  return rows;
+}
+
+/** Rows that represent something to play (used for highlighting progress). */
+export function isContentRow(row: Row): boolean {
+  return row.kind === "lyric" || row.kind === "tabblock";
+}
+
+export interface Measure {
+  /** Column of the bar line that opens the measure. */
+  start: number;
+  /** Column of the bar line that closes it (or the end of the line). */
+  end: number;
+}
+
+/**
+ * Measures in a tab block, from the bar lines (|) of its longest line.
+ * Each measure is played over one bar of the song's time signature.
+ */
+export function tabMeasures(lines: string[]): Measure[] {
+  const line = lines.reduce((a, b) => (b.length > a.length ? b : a), "");
+  const bars: number[] = [];
+  for (let i = 0; i < line.length; i++) if (line[i] === "|") bars.push(i);
+  if (!bars.length) return [];
+  const content = line.replace(/\s+$/, "").length;
+  if (content - 1 > bars[bars.length - 1]) bars.push(content);
+  const measures: Measure[] = [];
+  for (let i = 0; i + 1 < bars.length; i++) {
+    // Skip the empty gap inside a double bar line (||).
+    if (bars[i + 1] - bars[i] > 1) measures.push({ start: bars[i], end: bars[i + 1] });
+  }
+  return measures;
 }

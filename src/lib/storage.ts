@@ -31,6 +31,7 @@ const KEYS = {
   favorites: "fretboard.favorites",
   prefs: "fretboard.prefs",
   theme: "fretboard.theme",
+  settings: "fretboard.settings",
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -127,4 +128,24 @@ export function getTheme(): Theme {
 }
 export function setTheme(theme: Theme): void {
   write(KEYS.theme, theme);
+}
+
+export interface PlaySettings {
+  /** Highlight the line you're on and dim the lines already played. */
+  highlight: boolean;
+  /** Show a timed cursor and progress bar on tab blocks. */
+  tabTiming: boolean;
+}
+
+const DEFAULT_SETTINGS: PlaySettings = { highlight: true, tabTiming: true };
+
+export function useSettings(): [PlaySettings, (patch: Partial<PlaySettings>) => void] {
+  useStoreVersion();
+  const settings = { ...DEFAULT_SETTINGS, ...read<Partial<PlaySettings>>(KEYS.settings, {}) };
+  const update = useCallback(
+    (patch: Partial<PlaySettings>) =>
+      write(KEYS.settings, { ...DEFAULT_SETTINGS, ...read<Partial<PlaySettings>>(KEYS.settings, {}), ...patch }),
+    [],
+  );
+  return [settings, update];
 }
