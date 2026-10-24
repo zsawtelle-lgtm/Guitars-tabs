@@ -31,6 +31,8 @@ export interface SongPrefs {
   videoEnd?: number;
   /** Playback speed of the recording (0.5–1). */
   videoRate?: number;
+  /** Apple Music link for the song, opened in the Music app. */
+  appleMusicUrl?: string;
 }
 
 export const DEFAULT_PREFS: SongPrefs = { transpose: 0, scrollSpeed: 3, fontSize: 16 };

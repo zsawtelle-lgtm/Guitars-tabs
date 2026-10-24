@@ -10,6 +10,8 @@ import type { TabPlayback } from "./TabBlock";
 import { SongSheet } from "./SongSheet";
 import { StrumPanel, stopStrum } from "./StrumPanel";
 import { VideoPanel } from "./VideoPanel";
+import { AppleMusicRow } from "./AppleMusicRow";
+import { parseAppleMusicUrl } from "../lib/appleMusic";
 import { formatTime } from "../lib/time";
 import { parseYouTubeId, type YTPlayer } from "../lib/youtube";
 import { ChordPopover, ChordStrip } from "./ChordViews";
@@ -293,6 +295,7 @@ export function SongPage({ song }: { song: Song }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [prefs, setPrefs, setSpeed, toggleScroll]);
 
+  const appleLink = parseAppleMusicUrl(prefs.appleMusicUrl);
   const moving = scrolling || (videoDriven && videoPlaying);
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const shownKey = song.key ? transposeChord(song.key, prefs.transpose) : undefined;
@@ -311,6 +314,11 @@ export function SongPage({ song }: { song: Song }) {
               aria-label={favorite ? "Remove from favorites" : "Add to favorites"} title="Favorite">
               {favorite ? "★" : "☆"}
             </button>
+            {appleLink && (
+              <a className="btn" href={appleLink} target="_blank" rel="noreferrer" title="Open in Apple Music">
+                ♫ Apple Music
+              </a>
+            )}
             <a className="btn" href={`#/edit/${encodeURIComponent(song.id)}`}>Edit</a>
           </div>
         </div>
@@ -323,6 +331,8 @@ export function SongPage({ song }: { song: Song }) {
       </header>
 
       {showChords && <ChordStrip chords={chords} onSelect={setPopover} />}
+
+      <AppleMusicRow key={`apple-${song.id}`} title={song.title} artist={song.artist} prefs={prefs} setPrefs={setPrefs} />
 
       <VideoPanel
         key={song.id}

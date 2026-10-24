@@ -431,3 +431,16 @@ select {
 .video-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; font-size: 0.85rem; }
 .video-marks .btn { min-height: 30px; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 .video-error { color: var(--danger); font-size: 0.85rem; margin: 8px 0 0; }
+
+/* ---------- Apple Music link ---------- */
+.apple-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+}
+.apple-row.editing { display: block; border-style: dashed; }
+.apple-mark {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, #fb5c74, #fa233b); color: #fff; font-weight: 800;
+}
+.apple-hint { font-size: 0.8rem; flex: 1; min-width: 180px; }
+.apple-small { min-height: 30px; font-size: 0.8rem; }
