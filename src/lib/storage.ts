@@ -17,6 +17,8 @@ export interface Song {
   body: string;
   /** Apple Music catalog ID when the song's details came from Apple's catalog. */
   appleId?: number;
+  /** MusicBrainz recording ID when the details came from MusicBrainz instead. */
+  mbid?: string;
   album?: string;
   artwork?: string;
   /** Link to the published chord sheet / tab the body was taken from. */

@@ -54,7 +54,8 @@ export function Library() {
             return (
               <li key={s.id}>
                 <a className={"song-row" + (s.artwork ? " has-art" : "")} href={`#/song/${encodeURIComponent(s.id)}`}>
-                  {s.artwork && <img src={s.artwork} alt="" className="song-row-art" loading="lazy" />}
+                  {s.artwork && <img src={s.artwork} alt="" className="song-row-art" loading="lazy"
+                    onError={(e) => (e.currentTarget.style.visibility = "hidden")} />}
                   <div className="song-row-main">
                     <span className="song-row-title">
                       {favorites.includes(s.id) && <span className="star on">★ </span>}

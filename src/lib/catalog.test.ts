@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findExisting, normalizeName, toCatalogSong } from "./catalog";
+import { findExisting, fromMusicBrainz, normalizeName, toCatalogSong } from "./catalog";
 
 const track = {
   wrapperType: "track",
@@ -18,6 +18,7 @@ const track = {
 describe("toCatalogSong", () => {
   it("maps the catalog fields and cleans up the link and artwork", () => {
     expect(toCatalogSong(track)).toEqual({
+      source: "apple",
       appleId: 1440833102,
       title: "Amazing Grace",
       artist: "Judy Collins",
@@ -46,5 +47,20 @@ describe("normalizeName / findExisting", () => {
     expect(findExisting(songs, toCatalogSong(track))?.id).toBe("b");
     expect(findExisting(songs.slice(0, 1), toCatalogSong(track))?.id).toBe("a");
     expect(findExisting([{ title: "Amazing Grace", artist: "John Newton" }], toCatalogSong(track))).toBeUndefined();
+  });
+});
+
+describe("fromMusicBrainz", () => {
+  it("maps recordings, joins artist credits and drops duplicates and videos", () => {
+    const songs = fromMusicBrainz([
+      { id: "r1", title: "Dyin' Tonight", length: 213_000, "artist-credit": [{ name: "Wren", joinphrase: " & " }, { name: "Co" }],
+        releases: [{ id: "bootleg", title: "Live", status: "Bootleg" }, { id: "rel1", title: "First LP", date: "2019-05-01", status: "Official" }] },
+      { id: "r2", title: "Dyin’ tonight", "artist-credit": [{ name: "Wren", joinphrase: " & " }, { name: "Co" }] },
+      { id: "r3", title: "Dyin' Tonight (video)", video: true },
+    ]);
+    expect(songs).toEqual([{
+      source: "musicbrainz", mbid: "r1", title: "Dyin' Tonight", artist: "Wren & Co", album: "First LP",
+      duration: 213, year: 2019, artwork: "https://coverartarchive.org/release/rel1/front-250",
+    }]);
   });
 });

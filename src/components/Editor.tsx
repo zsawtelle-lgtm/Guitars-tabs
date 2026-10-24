@@ -131,8 +131,9 @@ export function Editor({ song }: { song?: Song }) {
         </label>
       </div>
 
-      {draft.appleId && (
-        <p className="source-line"><span className="source-ok">✓</span> Title, artist and length from Apple Music
+      {(draft.appleId || draft.mbid) && (
+        <p className="source-line"><span className="source-ok">✓</span> Title, artist and length from{" "}
+          {draft.appleId ? "Apple Music" : "MusicBrainz"}
           {draft.album ? <> · <i>{draft.album}</i></> : null}</p>
       )}
 

@@ -321,7 +321,8 @@ export function SongPage({ song }: { song: Song }) {
     <div className="song-page">
       <header className="song-header">
         <div className="song-title-row">
-          {song.artwork && <img src={song.artwork} alt="" className="song-art" />}
+          {song.artwork && <img src={song.artwork} alt="" className="song-art"
+            onError={(e) => (e.currentTarget.style.display = "none")} />}
           <div className="song-title-text">
             <h1>{song.title}</h1>
             <div className="song-artist">{song.artist}{song.album ? <span className="muted"> · {song.album}</span> : null}</div>
@@ -543,7 +544,9 @@ function SourceLine({ song }: { song: Song }) {
   }
   return (
     <p className="source-line">
-      {song.appleId ? <span><span className="source-ok">✓</span> Song info from Apple Music</span> : null}
+      {song.appleId || song.mbid ? (
+        <span><span className="source-ok">✓</span> Song info from {song.appleId ? "Apple Music" : "MusicBrainz"}</span>
+      ) : null}
       {host ? (
         <span>
           Chords from{" "}
