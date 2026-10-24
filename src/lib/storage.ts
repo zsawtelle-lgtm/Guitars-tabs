@@ -135,9 +135,15 @@ export interface PlaySettings {
   highlight: boolean;
   /** Show a timed cursor and progress bar on tab blocks. */
   tabTiming: boolean;
+  /** "song": a tab plays once as part of the song. "loop": it repeats on its own for practice. */
+  tabMode: TabMode;
+  /** Tempo multiplier used when looping a tab for practice. */
+  practiceSpeed: number;
 }
 
-const DEFAULT_SETTINGS: PlaySettings = { highlight: true, tabTiming: true };
+export type TabMode = "song" | "loop";
+
+const DEFAULT_SETTINGS: PlaySettings = { highlight: true, tabTiming: true, tabMode: "song", practiceSpeed: 1 };
 
 export function useSettings(): [PlaySettings, (patch: Partial<PlaySettings>) => void] {
   useStoreVersion();

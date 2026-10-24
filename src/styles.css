@@ -357,3 +357,22 @@ select {
 @keyframes tab-wait { from { opacity: 0.25; } to { opacity: 1; } }
 .tab-chords { position: relative; height: 1.35em; }
 .tab-chords .chord { position: absolute; top: 0; white-space: nowrap; }
+
+/* Tab mode / practice tempo */
+.tab-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; font-family: var(--sans); }
+.segmented {
+  display: inline-flex; padding: 2px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border);
+}
+.segmented button {
+  border: none; background: transparent; cursor: pointer; padding: 3px 10px; border-radius: 6px;
+  font-size: 0.75rem; font-weight: 700; color: var(--muted);
+}
+.segmented button.selected { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+
+/* Word-by-word highlight inside the current line */
+.lyric-text { border-radius: 4px; transition: background 120ms, color 120ms; }
+.sheet-row.current .word.sung .lyric-text { color: var(--chord); }
+.sheet-row.current .word.now .lyric-text {
+  background: var(--accent); color: var(--accent-text); box-shadow: 0 0 0 2px var(--accent);
+}
+.sheet-row.current .word.now .chord { text-decoration: underline 2px; text-underline-offset: 3px; }

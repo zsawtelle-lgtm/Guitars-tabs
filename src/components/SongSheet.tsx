@@ -2,6 +2,7 @@ import { memo, type ReactNode } from "react";
 import { isContentRow, type Row, type Segment } from "../lib/parser";
 import { transposeChord } from "../lib/music";
 import { TabBlock, type TabPlayback } from "./TabBlock";
+import type { TabMode } from "../lib/storage";
 
 interface Props {
   rows: Row[];
@@ -11,6 +12,10 @@ interface Props {
   /** Row to highlight as "you are here"; -1 for none. Earlier content rows are dimmed. */
   activeRow?: number;
   tabTiming?: boolean;
+  tabMode?: TabMode;
+  practiceSpeed?: number;
+  onTabModeChange?: (mode: TabMode) => void;
+  onPracticeSpeedChange?: (speed: number) => void;
   tabPlayback?: TabPlayback | null;
   onTabPlay?: (row: number) => void;
   onTabStop?: () => void;
@@ -18,8 +23,8 @@ interface Props {
 }
 
 export const SongSheet = memo(function SongSheet({
-  rows, transpose, fontSize, onChordClick, activeRow = -1, tabTiming = false, tabPlayback = null,
-  onTabPlay, onTabStop, onTabDone,
+  rows, transpose, fontSize, onChordClick, activeRow = -1, tabTiming = false, tabMode = "song", practiceSpeed = 1,
+  onTabModeChange, onPracticeSpeedChange, tabPlayback = null, onTabPlay, onTabStop, onTabDone,
 }: Props) {
   return (
     <div className="sheet" style={{ fontSize }}>
@@ -41,6 +46,10 @@ export const SongSheet = memo(function SongSheet({
                   transpose={transpose}
                   onChordClick={onChordClick}
                   timing={tabTiming}
+                  mode={tabMode}
+                  practiceSpeed={practiceSpeed}
+                  onModeChange={(m) => onTabModeChange?.(m)}
+                  onPracticeSpeedChange={(s) => onPracticeSpeedChange?.(s)}
                   playback={tabPlayback?.row === i ? tabPlayback : null}
                   onPlay={() => onTabPlay?.(i)}
                   onStop={() => onTabStop?.()}
@@ -85,7 +94,7 @@ function LyricLine({
   }
 
   const chunks: ReactNode[] = words.map((word, wi) => (
-    <span key={wi} className="word">
+    <span key={wi} className="word" data-w={word.some((p) => p.chord || p.text.trim()) || undefined}>
       {word.map((piece, pi) => {
         const shown = piece.chord ? transposeChord(piece.chord, transpose) : undefined;
         return (
@@ -99,7 +108,7 @@ function LyricLine({
                 )}
               </span>
             )}
-            <span className="lyric">{piece.text || (shown ? " " : "")}</span>
+            <LyricText text={piece.text || (shown ? " " : "")} />
           </span>
         );
       })}
@@ -107,4 +116,15 @@ function LyricLine({
   ));
 
   return <div className={"sheet-line" + (hasChords ? " has-chords" : "")}>{chunks}</div>;
+}
+
+/** Lyric text with trailing spaces kept outside the highlightable part. */
+function LyricText({ text }: { text: string }) {
+  const body = text.trimEnd();
+  return (
+    <span className="lyric">
+      {body && <span className="lyric-text">{body}</span>}
+      {text.slice(body.length)}
+    </span>
+  );
 }

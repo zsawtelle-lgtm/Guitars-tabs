@@ -7,8 +7,10 @@ A chord and tab viewer in the spirit of Ultimate Guitar, built for playing along
 - **Song sheets**: chords above lyrics, section headers, and tab staff notation. Tap any chord to see its diagram and alternate voicings.
 - **Autoscroll**: a play/pause button with speed from 0.5 to 10 (−/+ buttons or a fine slider). **Fit to song length** sets the speed so the rest of the song scrolls in the song's duration. Speed is remembered per song, and the screen stays awake while scrolling.
 - **Metronome**: sample-accurate Web Audio clicks, 30–300 BPM, 1–12 beats per bar, accented downbeat, tap tempo, and a visual beat. Opening a song presets the tempo, and the metronome keeps running as you move between pages.
-- **Tab timing** (toggle): each tab section gets a ▶ button, progress bar and Bar/Beat readout. A cursor sweeps across the tab in time with the metronome, after a one-bar count-in. During autoscroll, scrolling pauses at a tab, plays it in time, then carries on.
-- **Highlight progress** (toggle): the line you're on is highlighted, lines already played are dimmed, and a thin bar above the toolbar shows how far through the song you are.
+- **Tab timing** (toggle): each tab section gets a ▶ button, progress bar and Bar/Beat readout. A cursor sweeps across the tab in time with the metronome, after a one-bar count-in. Each tab has a **Song / Loop** switch:
+  - **Song**: during autoscroll, scrolling pauses at the tab, plays it once in time, then carries on.
+  - **Loop**: ▶ repeats just that section until you stop it, at 50%, 75% or 100% tempo, for learning it. Autoscroll scrolls past it.
+- **Highlight progress** (toggle): the line you're on is highlighted, along with the word you're on (words already sung change color), lines already played are dimmed, and a thin bar above the toolbar shows how far through the song you are.
 - **Transpose** by semitone. Chords, the key and the diagrams all update, with barre shapes generated for any key.
 - **Chord library**: all 12 roots × 16 chord types, with multiple voicings.
 - **Your songs**: add or edit songs (edits to built-in songs are saved as your own copy). Paste chords-over-lyrics text straight from a website and it's understood as-is. Favorites and search.

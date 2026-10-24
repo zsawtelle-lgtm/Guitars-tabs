@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chordsInSong, groupRows, isContentRow, parseSong } from "../lib/parser";
 import { transposeChord } from "../lib/music";
-import { getFavorites, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song } from "../lib/storage";
+import {
+  getFavorites, toggleFavorite, useSettings, useSongPrefs, useStoreVersion, type Song, type TabMode,
+} from "../lib/storage";
 import { notifyMetronome, pxPerSecToSpeed, speedToPxPerSec, useAutoScroll, useMetronome, useWakeLock } from "../lib/hooks";
 import { metronome } from "../lib/metronome";
 import type { TabPlayback } from "./TabBlock";
@@ -38,10 +40,36 @@ export function SongPage({ song }: { song: Song }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const playedTabs = useRef(new Set<number>());
   const progressRef = useRef<HTMLDivElement>(null);
+  // Where the focus point sits inside the current row (0 = top, 1 = bottom).
+  const focusRef = useRef({ row: -1, frac: 0 });
+  const shownRowRef = useRef(-1);
+  const highlightRef = useRef(settings.highlight);
+  highlightRef.current = settings.highlight;
+  const litWordRef = useRef("");
+
+  // Highlights the word you're on in the current line, and marks the words before it
+  // as sung. Words advance as the focus point moves down through the line.
+  const applyWordHighlight = useCallback(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const row = shownRowRef.current;
+    const el = highlightRef.current ? sheet.querySelector(`[data-row="${row}"]`) : null;
+    const words = el ? [...el.querySelectorAll<HTMLElement>(".word[data-w]")] : [];
+    const frac = focusRef.current.row === row ? focusRef.current.frac : 0;
+    const now = words.length ? Math.min(words.length - 1, Math.floor(frac * words.length)) : -1;
+    const key = `${row}:${now}:${words.length}`;
+    if (key === litWordRef.current) return;
+    litWordRef.current = key;
+    sheet.querySelectorAll(".word.now, .word.sung").forEach((w) => w.classList.remove("now", "sung"));
+    words.forEach((w, i) => {
+      if (i < now) w.classList.add("sung");
+      else if (i === now) w.classList.add("now");
+    });
+  }, []);
 
   const pxPerSec = speedToPxPerSec(prefs.scrollSpeed) * (prefs.fontSize / 16);
   // Autoscroll holds while a tab plays, so the tab gets its real time before the song moves on.
-  useAutoScroll(scrolling && !tabPlay, pxPerSec, () => setScrolling(false));
+  useAutoScroll(scrolling && !(tabPlay && !tabPlay.loop), pxPerSec, () => setScrolling(false));
   useWakeLock(scrolling || metro.running || !!tabPlay);
 
   // Track where in the song you are. The focus point moves through the sheet in step
@@ -60,11 +88,16 @@ export function SongPage({ song }: { song: Song }) {
       const rect = sheet.getBoundingClientRect();
       const focus = rect.top + progress * rect.height;
       let current = -1;
+      let frac = 0;
       for (const el of sheet.querySelectorAll<HTMLElement>("[data-content]")) {
         current = Number(el.dataset.row);
-        if (el.getBoundingClientRect().bottom >= focus) break;
+        const r = el.getBoundingClientRect();
+        frac = r.height > 0 ? Math.min(1, Math.max(0, (focus - r.top) / r.height)) : 0;
+        if (r.bottom >= focus) break;
       }
+      focusRef.current = { row: current, frac };
       setActiveRow(current);
+      applyWordHighlight();
     };
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -77,7 +110,7 @@ export function SongPage({ song }: { song: Song }) {
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [rows, prefs.fontSize, showChords]);
+  }, [rows, prefs.fontSize, showChords, applyWordHighlight]);
 
   // Once a tab has been played through, "you are here" moves on to the next line
   // rather than waiting for the scroll position to catch up.
@@ -86,38 +119,77 @@ export function SongPage({ song }: { song: Song }) {
     const next = rows.findIndex((r, i) => i > activeRow && isContentRow(r));
     if (next >= 0) shownRow = next;
   }
+  shownRowRef.current = shownRow;
+  useEffect(applyWordHighlight, [shownRow, settings.highlight, prefs.transpose, applyWordHighlight]);
 
   // Tab playback locks onto the metronome: it starts on the next bar (after a
   // count-in bar if the metronome was silent) and stops the click again if it started it.
+  // A practice loop below full speed slows the metronome for its duration.
   const startedMetro = useRef(false);
-  const startTab = useCallback((row: number) => {
-    startedMetro.current = !metronome.running;
-    const start = metronome.nextDownbeat();
-    notifyMetronome();
-    setTabPlay({ row, start, bpm: metronome.bpm, beatsPerBar: metronome.beatsPerBar });
-  }, []);
+  const savedBpm = useRef<number | null>(null);
+  const tabPlayRef = useRef(tabPlay);
+  tabPlayRef.current = tabPlay;
+
   const stopTab = useCallback(() => {
     if (startedMetro.current) {
       metronome.stop();
-      notifyMetronome();
       startedMetro.current = false;
     }
+    if (savedBpm.current !== null) {
+      metronome.bpm = savedBpm.current;
+      savedBpm.current = null;
+    }
+    notifyMetronome();
     setTabPlay(null);
   }, []);
+  const startTab = useCallback((row: number, loop: boolean, speed = 1) => {
+    if (loop && speed !== 1) {
+      savedBpm.current = metronome.bpm;
+      metronome.bpm = Math.max(30, Math.round(metronome.bpm * speed));
+    }
+    startedMetro.current = !metronome.running;
+    const start = metronome.nextDownbeat();
+    notifyMetronome();
+    setTabPlay({ row, start, bpm: metronome.bpm, beatsPerBar: metronome.beatsPerBar, loop });
+  }, []);
+  const playTab = useCallback(
+    (row: number) => startTab(row, settings.tabMode === "loop", settings.practiceSpeed),
+    [startTab, settings.tabMode, settings.practiceSpeed],
+  );
+  const changeTabMode = useCallback(
+    (tabMode: TabMode) => {
+      if (tabPlayRef.current) stopTab();
+      setSettings({ tabMode });
+    },
+    [stopTab, setSettings],
+  );
+  const changePracticeSpeed = useCallback(
+    (practiceSpeed: number) => {
+      setSettings({ practiceSpeed });
+      // Restart a running loop at the new tempo.
+      const current = tabPlayRef.current;
+      if (current?.loop) {
+        stopTab();
+        startTab(current.row, true, practiceSpeed);
+      }
+    },
+    [setSettings, stopTab, startTab],
+  );
   useEffect(() => () => {
     if (startedMetro.current) metronome.stop();
   }, []);
 
-  // While autoscrolling, play each tab block in time as the song reaches it.
+  // In Song mode, autoscroll plays each tab block once, in time, as the song reaches it.
+  // (Loop mode is for practising a section on its own, so autoscroll skips past.)
   useEffect(() => {
     // Scrolling back above a tab lets it play again next time through.
     for (const r of playedTabs.current) if (r > activeRow) playedTabs.current.delete(r);
-    if (!scrolling || !settings.tabTiming || tabPlay) return;
+    if (!scrolling || !settings.tabTiming || settings.tabMode !== "song" || tabPlay) return;
     if (rows[activeRow]?.kind === "tabblock" && !playedTabs.current.has(activeRow)) {
       playedTabs.current.add(activeRow);
-      startTab(activeRow);
+      startTab(activeRow, false);
     }
-  }, [activeRow, scrolling, settings.tabTiming, tabPlay, rows, startTab]);
+  }, [activeRow, scrolling, settings.tabTiming, settings.tabMode, tabPlay, rows, startTab]);
 
   // Preset the metronome to this song's tempo unless it's already clicking.
   useEffect(() => {
@@ -213,8 +285,12 @@ export function SongPage({ song }: { song: Song }) {
           onChordClick={setPopover}
           activeRow={settings.highlight ? shownRow : -1}
           tabTiming={settings.tabTiming}
+          tabMode={settings.tabMode}
+          practiceSpeed={settings.practiceSpeed}
+          onTabModeChange={changeTabMode}
+          onPracticeSpeedChange={changePracticeSpeed}
           tabPlayback={tabPlay}
-          onTabPlay={startTab}
+          onTabPlay={playTab}
           onTabStop={stopTab}
           onTabDone={stopTab}
         />
